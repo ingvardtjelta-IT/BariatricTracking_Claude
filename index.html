@@ -435,9 +435,9 @@
 <div class="toast" id="toast"></div>
 
 <!-- Sheet: velg loggemetode -->
-<div class="sheet-overlay" id="overlaymethod" onclick="closeSheet('sheetmethod')"></div>
+<div class="sheet-overlay" id="overlaymethod" onclick="closeSubSheet('sheetmethod')"></div>
 <div class="sheet" id="sheetmethod" style="display:none;">
-  <span class="close-x" onclick="closeSheet('sheetmethod')">Lukk</span>
+  <span class="close-x" onclick="closeSubSheet('sheetmethod')">Lukk</span>
   <div class="sheet-handle"></div>
   <h2>Legg til mat</h2>
   <div class="sub" id="methodSub">Hvordan vil du legge inn maten?</div>
@@ -454,9 +454,9 @@
 </div>
 
 <!-- Sheet: skanner -->
-<div class="sheet-overlay" id="overlayscan" onclick="closeSheet('sheetscan')"></div>
+<div class="sheet-overlay" id="overlayscan" onclick="closeSubSheet('sheetscan')"></div>
 <div class="sheet" id="sheetscan" style="display:none;">
-  <span class="close-x" onclick="closeSheet('sheetscan')">Lukk</span>
+  <span class="close-x" onclick="closeSubSheet('sheetscan')">Lukk</span>
   <div class="sheet-handle"></div>
   <h2>Skann strekkode</h2>
   <div class="sub">Rett kameraet mot varens EAN-strekkode.</div>
@@ -471,9 +471,9 @@
 </div>
 
 <!-- Sheet: manuell mat-registrering -->
-<div class="sheet-overlay" id="overlaymanual" onclick="closeSheet('sheetmanual')"></div>
+<div class="sheet-overlay" id="overlaymanual" onclick="closeSubSheet('sheetmanual')"></div>
 <div class="sheet" id="sheetmanual" style="display:none;">
-  <span class="close-x" onclick="closeSheet('sheetmanual')">Lukk</span>
+  <span class="close-x" onclick="closeSubSheet('sheetmanual')">Lukk</span>
   <div class="sheet-handle"></div>
   <h2>Skriv inn mat</h2>
   <div class="sub">Næringsinnhold per 100 g.</div>
@@ -871,11 +871,24 @@
   function openAddMethod() {
     const m = state.meals.find(x => x.id === activeMealId);
     document.getElementById('methodSub').textContent = `Hvordan vil du legge mat til ${m.name.toLowerCase()}?`;
+    closeSheet('sheetmeal');
     openSheet('sheetmethod');
   }
   function openTemplates() {
     closeSheet('sheetmethod');
     alert('Mal-biblioteket er ikke bygget i denne prototypen ennå — tenkt som en liste over tidligere lagrede måltider, sortert etter sist brukt.');
+    backToMealSheet();
+  }
+  // Lukker et under-ark (metode-valg / skanner / manuell) og går tilbake
+  // til måltid-arket i stedet for å la begge stå åpne samtidig.
+  function closeSubSheet(id) {
+    closeSheet(id);
+    backToMealSheet();
+  }
+  function backToMealSheet() {
+    if (!activeMealId) return;
+    renderMealSheet();
+    openSheet('sheetmeal');
   }
 
   // ---------- Manuell mat ----------
@@ -897,7 +910,8 @@
     e.foods.push({ id: uid(), name, grams, kcal, protein });
     persist();
     closeSheet('sheetmanual');
-    renderMealSheet(); render();
+    render();
+    backToMealSheet();
     showToast('Lagret');
   }
 
@@ -954,7 +968,8 @@
     e.foods.push({ id: uid(), name, grams, kcal, protein });
     persist();
     closeSheet('sheetscan');
-    renderMealSheet(); render();
+    render();
+    backToMealSheet();
     showToast('Lagret');
   }
 
