@@ -546,8 +546,11 @@
   <div class="sheet-handle"></div>
   <h2>Registrer vekt</h2>
   <div class="sub" id="weightSheetSub">For valgt dag</div>
+  <div class="field-row"><label>Dato</label><input type="date" id="weightDateInput"></div>
+  <div class="field-row"><label>Tidspunkt</label><input type="time" id="weightTimeInput"></div>
   <div class="field-row"><label>Vekt (kg)</label><input type="number" step="0.1" id="weightInput" placeholder="0,0"></div>
   <button class="save-btn" onclick="saveWeight()">Lagre</button>
+  <button class="save-btn danger" id="weightDeleteBtn" style="display:none;" onclick="deleteWeightEntry()">Slett denne registreringen</button>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
@@ -976,37 +979,110 @@
   // ============================================================
   // TAB: VEKT
   // ============================================================
+  let editingWeightEntryId = null;
+
+  function currentTimeStr() {
+    const d = new Date();
+    return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  }
+
   function renderWeightTab() {
-    const ws = [...state.weights].sort((a, b) => b.date.localeCompare(a.date));
-    const last = ws[0];
+    const ws = [...state.weights].sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')));
+    const last = ws[ws.length - 1];
     document.getElementById('mainArea').innerHTML = `
       <div class="weight-hero">
         <div class="lbl">Siste registrering</div>
         <div class="num">${last ? last.kg.toFixed(1) + ' kg' : '–'}</div>
       </div>
+      <div class="settings-block">${renderWeightChart(ws)}</div>
       <button class="save-btn" onclick="openWeightSheet()">+ Registrer vekt for valgt dag</button>
       <div class="section-label">Historikk</div>
       <div class="settings-block">
-        ${ws.length ? ws.map(w => `<div class="history-row"><span>${shortDate(w.date)}</span><strong>${w.kg.toFixed(1)} kg</strong></div>`).join('')
+        ${ws.length ? [...ws].reverse().map(w => `
+            <div class="history-row" style="cursor:pointer" onclick="openWeightSheet('${w.id}')">
+              <span>${shortDate(w.date)}${w.time ? ' · ' + w.time : ''}</span>
+              <strong>${w.kg.toFixed(1)} kg ›</strong>
+            </div>`).join('')
                     : '<div class="info-note">Ingen målinger ennå.</div>'}
       </div>`;
   }
-  function openWeightSheet() {
-    document.getElementById('weightSheetSub').textContent = state.currentDate === todayStr() ? 'For i dag' : 'For ' + shortDate(state.currentDate);
-    const existing = state.weights.find(w => w.date === state.currentDate);
-    document.getElementById('weightInput').value = existing ? existing.kg : '';
+
+  function renderWeightChart(sortedWeights) {
+    if (sortedWeights.length < 2) {
+      return '<div class="info-note">Legg inn minst to registreringer for å se en graf over utviklingen.</div>';
+    }
+    const width = 400, height = 160, pad = 24;
+    const kgs = sortedWeights.map(w => w.kg);
+    const minKg = Math.min(...kgs) - 0.5;
+    const maxKg = Math.max(...kgs) + 0.5;
+    const minT = dateObj(sortedWeights[0].date).getTime();
+    const maxT = dateObj(sortedWeights[sortedWeights.length - 1].date).getTime();
+    const spanT = Math.max(1, maxT - minT);
+    const spanKg = Math.max(0.1, maxKg - minKg);
+
+    const points = sortedWeights.map(w => {
+      const x = pad + ((dateObj(w.date).getTime() - minT) / spanT) * (width - pad * 2);
+      const y = height - pad - ((w.kg - minKg) / spanKg) * (height - pad * 2);
+      return { x, y, w };
+    });
+    const pathD = points.map((p, i) => (i === 0 ? 'M' : 'L') + p.x.toFixed(1) + ',' + p.y.toFixed(1)).join(' ');
+    const circles = points.map(p =>
+      `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="5" fill="#2F4A3E" stroke="#FFFFFF" stroke-width="2" style="cursor:pointer" onclick="openWeightSheet('${p.w.id}')"></circle>`
+    ).join('');
+
+    return `
+      <svg viewBox="0 0 ${width} ${height}" style="width:100%; height:auto; display:block;" preserveAspectRatio="xMidYMid meet">
+        <path d="${pathD}" fill="none" stroke="#2F4A3E" stroke-width="2" opacity="0.55"/>
+        ${circles}
+      </svg>
+      <div style="display:flex; justify-content:space-between; font-family:-apple-system,'Segoe UI',sans-serif; font-size:11px; color:var(--ink-soft); margin-top:6px;">
+        <span>${shortDate(sortedWeights[0].date)}</span>
+        <span>${shortDate(sortedWeights[sortedWeights.length - 1].date)}</span>
+      </div>
+      <div class="info-note" style="margin-top:10px;">Trykk på et punkt for å se eller rette den registreringen.</div>`;
+  }
+
+  function openWeightSheet(entryId) {
+    const entry = entryId ? state.weights.find(w => w.id === entryId)
+                           : state.weights.find(w => w.date === state.currentDate);
+    editingWeightEntryId = entry ? entry.id : null;
+
+    document.getElementById('weightSheetSub').textContent = entry
+      ? 'Rediger registrering'
+      : (state.currentDate === todayStr() ? 'For i dag' : 'For ' + shortDate(state.currentDate));
+    document.getElementById('weightDateInput').value = entry ? entry.date : state.currentDate;
+    document.getElementById('weightTimeInput').value = entry && entry.time ? entry.time : currentTimeStr();
+    document.getElementById('weightInput').value = entry ? entry.kg : '';
+    document.getElementById('weightDeleteBtn').style.display = entry ? 'block' : 'none';
     openSheet('sheetweight');
   }
+
   function saveWeight() {
+    const date = document.getElementById('weightDateInput').value;
+    const time = document.getElementById('weightTimeInput').value;
     const kg = parseFloat(document.getElementById('weightInput').value.replace(',', '.'));
-    if (!kg) return;
-    const existing = state.weights.find(w => w.date === state.currentDate);
-    if (existing) existing.kg = kg;
-    else state.weights.push({ id: uid(), date: state.currentDate, kg });
+    if (!date || !kg) return;
+
+    if (editingWeightEntryId) {
+      const entry = state.weights.find(w => w.id === editingWeightEntryId);
+      if (entry) { entry.date = date; entry.time = time; entry.kg = kg; }
+    } else {
+      state.weights.push({ id: uid(), date, time, kg });
+    }
     persist();
     closeSheet('sheetweight');
     render();
     showToast('Vekt lagret');
+  }
+
+  function deleteWeightEntry() {
+    if (!editingWeightEntryId) return;
+    if (!confirm('Slette denne registreringen?')) return;
+    state.weights = state.weights.filter(w => w.id !== editingWeightEntryId);
+    persist();
+    closeSheet('sheetweight');
+    render();
+    showToast('Slettet');
   }
 
   // ============================================================
