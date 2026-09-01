@@ -553,6 +553,20 @@
   <button class="save-btn danger" id="weightDeleteBtn" style="display:none;" onclick="deleteWeightEntry()">Slett denne registreringen</button>
 </div>
 
+<!-- Sheet: avtale/påminnelse -->
+<div class="sheet-overlay" id="overlayappt" onclick="closeSheet('sheetappt')"></div>
+<div class="sheet" id="sheetappt" style="display:none;">
+  <span class="close-x" onclick="closeSheet('sheetappt')">Lukk</span>
+  <div class="sheet-handle"></div>
+  <h2 id="apptSheetTitle">Ny avtale</h2>
+  <div class="field-row"><label>Navn</label><input type="text" id="apptTitleInput" placeholder="f.eks. Kontrolltime kirurgisk avd."></div>
+  <div class="field-row"><label>Dato</label><input type="date" id="apptDateInput"></div>
+  <div class="field-row"><label>Tidspunkt</label><input type="time" id="apptTimeInput"></div>
+  <div class="field-row"><label>Notat</label><input type="text" id="apptNotesInput" placeholder="valgfritt"></div>
+  <button class="save-btn" onclick="saveAppointment()">Lagre</button>
+  <button class="save-btn danger" id="apptDeleteBtn" style="display:none;" onclick="deleteAppointment()">Slett avtale</button>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 <script>
   // ============================================================
@@ -633,7 +647,8 @@
     ],
     vitaminTaken: [], // {date, vitaminId}
     weights: [],      // {id, date, kg}
-    settings: { waterGoal: 1500, proteinGoal: 80, hobbitMode: false },
+    appointments: [], // {id, title, date, time, notes}
+    settings: { waterGoal: 1500, proteinGoal: 80, hobbitMode: false, gender: '', age: null, heightCm: null, surgeryDate: '' },
   };
 
   const mockProductDb = {
@@ -738,6 +753,17 @@
   // ============================================================
   // TAB: I DAG
   // ============================================================
+  function daysDiff(dateStr) {
+    return Math.round((dateObj(dateStr).getTime() - dateObj(todayStr()).getTime()) / 86400000);
+  }
+  function surgeryBannerHtml() {
+    if (!state.settings.surgeryDate) return '';
+    const diff = daysDiff(state.settings.surgeryDate);
+    if (diff > 0) return `<div class="info-note" style="margin-bottom:16px;">🗓️ <strong>${diff} dager</strong> til operasjonen</div>`;
+    if (diff === 0) return `<div class="info-note" style="margin-bottom:16px;">🎉 I dag er operasjonsdagen</div>`;
+    return `<div class="info-note" style="margin-bottom:16px;">💪 Dag <strong>${Math.abs(diff)}</strong> etter operasjonen</div>`;
+  }
+
   function renderToday() {
     const date = state.currentDate;
     const takenIds = vitaminsTakenToday(date);
@@ -752,6 +778,7 @@
     const loggedCount = meals.filter(m => entryFor(m.id, date)?.foods.length).length;
 
     document.getElementById('mainArea').innerHTML = `
+      ${surgeryBannerHtml()}
       <div class="quickrow">
         <div class="quickbtn" onclick="openSheet('sheetwater')"><span class="ic">💧</span>Vann</div>
         <div class="quickbtn ${ratio === 1 ? 'complete' : ''}" onclick="openSheet('sheetvitamin')"><span class="ic">${vitaminEmoji}</span>Vitamin</div>
@@ -986,14 +1013,24 @@
     return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
   }
 
+  function computeBmi(weightKg) {
+    const h = state.settings.heightCm;
+    if (!h || !weightKg) return null;
+    const m = h / 100;
+    return weightKg / (m * m);
+  }
+
   function renderWeightTab() {
     const ws = [...state.weights].sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')));
     const last = ws[ws.length - 1];
+    const bmi = last ? computeBmi(last.kg) : null;
     document.getElementById('mainArea').innerHTML = `
       <div class="weight-hero">
         <div class="lbl">Siste registrering</div>
         <div class="num">${last ? last.kg.toFixed(1) + ' kg' : '–'}</div>
       </div>
+      ${bmi ? `<div class="summary" style="margin-bottom:16px;"><div class="stat"><div class="num">${bmi.toFixed(1)}</div><div class="lbl">BMI</div></div></div>`
+            : (state.settings.heightCm ? '' : '<div class="info-note" style="margin-bottom:16px;">Legg inn høyden din under Innstillinger for å se BMI her.</div>')}
       <div class="settings-block">${renderWeightChart(ws)}</div>
       <button class="save-btn" onclick="openWeightSheet()">+ Registrer vekt for valgt dag</button>
       <div class="section-label">Historikk</div>
@@ -1086,10 +1123,130 @@
   }
 
   // ============================================================
+  // AVTALER / PÅMINNELSER + KALENDER-EKSPORT
+  // ============================================================
+  let editingAppointmentId = null;
+
+  function apptRowHtml(a) {
+    return `<div class="history-row" style="cursor:pointer" onclick="openApptSheet('${a.id}')">
+      <span>${a.title} — ${shortDate(a.date)}${a.time ? ' · ' + a.time : ''}</span>
+      <span>›</span>
+    </div>`;
+  }
+
+  function openApptSheet(id) {
+    const a = id ? state.appointments.find(x => x.id === id) : null;
+    editingAppointmentId = a ? a.id : null;
+    document.getElementById('apptSheetTitle').textContent = a ? 'Rediger avtale' : 'Ny avtale';
+    document.getElementById('apptTitleInput').value = a ? a.title : '';
+    document.getElementById('apptDateInput').value = a ? a.date : state.currentDate;
+    document.getElementById('apptTimeInput').value = a && a.time ? a.time : '';
+    document.getElementById('apptNotesInput').value = a && a.notes ? a.notes : '';
+    document.getElementById('apptDeleteBtn').style.display = a ? 'block' : 'none';
+    openSheet('sheetappt');
+  }
+  function saveAppointment() {
+    const title = document.getElementById('apptTitleInput').value.trim();
+    const date = document.getElementById('apptDateInput').value;
+    const time = document.getElementById('apptTimeInput').value;
+    const notes = document.getElementById('apptNotesInput').value.trim();
+    if (!title || !date) return;
+    if (editingAppointmentId) {
+      const a = state.appointments.find(x => x.id === editingAppointmentId);
+      if (a) { a.title = title; a.date = date; a.time = time; a.notes = notes; }
+    } else {
+      state.appointments.push({ id: uid(), title, date, time, notes });
+    }
+    persist();
+    closeSheet('sheetappt');
+    renderSettingsTab();
+    showToast('Avtale lagret');
+  }
+  function deleteAppointment() {
+    if (!editingAppointmentId) return;
+    if (!confirm('Slette denne avtalen?')) return;
+    state.appointments = state.appointments.filter(a => a.id !== editingAppointmentId);
+    persist();
+    closeSheet('sheetappt');
+    renderSettingsTab();
+  }
+
+  function icsEscape(str) {
+    return String(str || '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
+  }
+  function pad2(n) { return String(n).padStart(2, '0'); }
+  function icsNow() {
+    const d = new Date();
+    return d.getUTCFullYear() + pad2(d.getUTCMonth() + 1) + pad2(d.getUTCDate()) + 'T' +
+           pad2(d.getUTCHours()) + pad2(d.getUTCMinutes()) + pad2(d.getUTCSeconds()) + 'Z';
+  }
+  function generateIcs() {
+    const events = state.appointments.map(a => ({ title: a.title, date: a.date, time: a.time, notes: a.notes }));
+    if (state.settings.surgeryDate) {
+      events.unshift({ title: 'Operasjonsdato', date: state.settings.surgeryDate, time: '', notes: '' });
+    }
+    const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Maltidslogg//NO'];
+    events.forEach(e => {
+      const dt = e.date.replace(/-/g, '');
+      lines.push('BEGIN:VEVENT');
+      lines.push('UID:' + uid() + '@maltidslogg');
+      lines.push('DTSTAMP:' + icsNow());
+      if (e.time) {
+        const [hh, mm] = e.time.split(':');
+        lines.push(`DTSTART:${dt}T${pad2(hh)}${pad2(mm)}00`);
+      } else {
+        lines.push(`DTSTART;VALUE=DATE:${dt}`);
+      }
+      lines.push('SUMMARY:' + icsEscape(e.title));
+      if (e.notes) lines.push('DESCRIPTION:' + icsEscape(e.notes));
+      lines.push('END:VEVENT');
+    });
+    lines.push('END:VCALENDAR');
+    return lines.join('\r\n');
+  }
+  function exportCalendar() {
+    if (!state.appointments.length && !state.settings.surgeryDate) {
+      alert('Ingen avtaler eller operasjonsdato å eksportere ennå.');
+      return;
+    }
+    const blob = new Blob([generateIcs()], { type: 'text/calendar' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'avtaler.ics'; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // ============================================================
   // TAB: INNSTILLINGER
   // ============================================================
   function renderSettingsTab() {
     document.getElementById('mainArea').innerHTML = `
+      <div class="settings-block">
+        <h3>Om deg</h3>
+        <div class="field-row"><label>Kjønn</label>
+          <select onchange="changeSetting('gender', this.value)" style="flex:1;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:14px;font-family:inherit;">
+            <option value="" ${!state.settings.gender ? 'selected' : ''}>Ikke oppgitt</option>
+            <option value="kvinne" ${state.settings.gender === 'kvinne' ? 'selected' : ''}>Kvinne</option>
+            <option value="mann" ${state.settings.gender === 'mann' ? 'selected' : ''}>Mann</option>
+            <option value="annet" ${state.settings.gender === 'annet' ? 'selected' : ''}>Annet</option>
+          </select>
+        </div>
+        <div class="field-row"><label>Alder</label><input type="number" value="${state.settings.age || ''}" onchange="changeSetting('age', this.value, true)"></div>
+        <div class="field-row"><label>Høyde (cm)</label><input type="number" value="${state.settings.heightCm || ''}" onchange="changeSetting('heightCm', this.value, true)"></div>
+        <div class="field-row"><label>Operasjonsdato</label><input type="date" value="${state.settings.surgeryDate || ''}" onchange="changeSetting('surgeryDate', this.value)"></div>
+      </div>
+
+      <div class="settings-block">
+        <h3>Avtaler &amp; påminnelser</h3>
+        <div id="apptList">${state.appointments.length ? state.appointments.slice().sort((a,b)=>a.date.localeCompare(b.date)).map(apptRowHtml).join('') : '<div class="info-note">Ingen avtaler lagt inn ennå.</div>'}</div>
+        <button class="save-btn secondary" onclick="openApptSheet()">+ Ny avtale</button>
+        <button class="save-btn" onclick="exportCalendar()">📅 Eksporter til kalender (.ics)</button>
+        <div class="info-note">
+          Laster ned en .ics-fil du kan importere i Kalender-appen din (iPhone, Android, Outlook m.fl.).
+          ${state.settings.surgeryDate ? 'Operasjonsdatoen blir automatisk med i eksporten.' : ''}
+        </div>
+      </div>
+
       <div class="settings-block">
         <h3>Måltidsrytme</h3>
         <div id="slotEditor">${state.meals.map(slotEditorHtml).join('')}</div>
@@ -1161,8 +1318,13 @@
     persist(); renderSettingsTab();
   }
   function changeGoal(key, value) {
-    state.settings[key] = Number(value);
-    persist(); renderSettingsTab();
+    changeSetting(key, value, true);
+  }
+  function changeSetting(key, value, isNumber) {
+    state.settings[key] = isNumber ? Number(value) : value;
+    persist();
+    renderSettingsTab();
+    renderHeader();
   }
 
   function exportBackup() {
