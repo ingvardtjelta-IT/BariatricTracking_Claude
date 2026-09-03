@@ -463,10 +463,9 @@
   <div id="reader"></div>
   <div id="scanResult"></div>
   <div class="api-note">
-    Demo-modus: dette oppslaget bruker en liten lokal produktliste i stedet for et ekte Kassal.app-kall,
-    siden det krever en API-nøkkel. Bytt ut <code>lookupProduct()</code> med et faktisk
-    <code>fetch</code>-kall mot <code>https://kassal.app/api/v1/products/ean/&lbrace;ean&rbrace;</code>
-    når du har nøkkel.
+    Slår opp varen i Open Food Facts (åpen, gratis matvaredatabase — ingen nøkkel trengs).
+    Finnes ikke varen der, brukes en liten lokal reserveliste i denne prototypen —
+    prøv EAN 7020097009523 eller 7035620035004 for å se den i praksis.
   </div>
 </div>
 
@@ -965,17 +964,27 @@
     if (scannerInstance) { scannerInstance.stop().catch(() => {}); scannerInstance = null; }
     lookupProduct(decodedText).then(showProductHit);
   }
-  // Bytt denne ut med et ekte Kassal.app-kall når du har API-nøkkel, f.eks.:
-  //
-  // async function lookupProduct(ean) {
-  //   const res = await fetch(`https://kassal.app/api/v1/products/ean/${ean}`, {
-  //     headers: { Authorization: `Bearer ${KASSAL_API_KEY}` }
-  //   });
-  //   const data = await res.json();
-  //   return data.data;
-  // }
+  // Slår opp i Open Food Facts (åpen, gratis, ingen nøkkel trengs for lesing).
+  // Faller tilbake til den lille lokale listen hvis varen ikke finnes der,
+  // eller hvis kallet feiler (f.eks. ingen nett, eller blokkert i en sandkasse-visning).
   async function lookupProduct(ean) {
-    await new Promise(r => setTimeout(r, 400));
+    try {
+      const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${ean}.json?fields=product_name,nutriments`);
+      const data = await res.json();
+      if (data.status === 1 && data.product) {
+        const n = data.product.nutriments || {};
+        const kcal = n['energy-kcal_100g'] ?? 0;
+        const protein = n['proteins_100g'] ?? 0;
+        return {
+          name: data.product.product_name || 'Ukjent produkt (Open Food Facts)',
+          kcal: Math.round(kcal),
+          protein: Math.round(protein * 10) / 10,
+        };
+      }
+    } catch (err) {
+      console.warn('Oppslag mot Open Food Facts feilet, bruker lokal reserveliste.', err);
+    }
+    await new Promise(r => setTimeout(r, 150));
     return mockProductDb[ean] || null;
   }
   function showProductHit(product) {
