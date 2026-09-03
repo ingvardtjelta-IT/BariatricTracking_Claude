@@ -665,6 +665,8 @@
     const saved = await storageGet(STORAGE_KEY);
     state = saved ? { ...structuredClone(defaultState), ...saved, settings: { ...defaultState.settings, ...(saved.settings || {}) } }
                   : structuredClone(defaultState);
+    // Åpne alltid på dagens dato, uansett hvilken dato som var valgt sist gang appen ble lukket.
+    state.currentDate = todayStr();
   }
   async function persist() { await storageSet(STORAGE_KEY, state); }
 
