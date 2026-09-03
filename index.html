@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Måltidslogg – prototype</title>
+<title>BariatriskReise – prototype</title>
 <style>
   :root{
     --bg: #F6F3EC;
@@ -32,6 +32,14 @@
   header{
     padding: 28px 20px 18px;
     border-bottom: 1px solid var(--line);
+  }
+  header .brand{
+    font-family: -apple-system, 'Segoe UI', sans-serif;
+    font-size: 11px;
+    letter-spacing: .08em;
+    color: var(--clay);
+    font-weight: 700;
+    margin-bottom: 8px;
   }
   header .day{
     font-family: -apple-system, 'Segoe UI', sans-serif;
@@ -719,6 +727,7 @@
     const water = waterTotal(d);
     const takenIds = vitaminsTakenToday(d);
     document.getElementById('headerArea').innerHTML = `
+      <div class="brand">BARIATRISKREISE</div>
       <div class="day">
         <span>${isToday ? 'I DAG' : longDate(d)}</span>
         <span class="datenav">
