@@ -482,16 +482,18 @@
 <div class="sheet" id="sheetmanual" style="display:none;">
   <span class="close-x" onclick="closeSubSheet('sheetmanual')">Lukk</span>
   <div class="sheet-handle"></div>
-  <h2>Skriv inn mat</h2>
+  <h2 id="manSheetTitle">Skriv inn mat</h2>
   <div class="sub">Søk i matvaredatabasen, eller fyll inn manuelt under.</div>
   <div class="field-row"><label>Søk</label><input type="text" id="manSearchInput" placeholder="f.eks. naturell yoghurt" oninput="onManualSearchInput(this.value)"></div>
   <div id="manSearchResults"></div>
   <div class="section-label" style="margin-top:18px;">Detaljer (juster ved behov)</div>
   <div class="field-row"><label>Navn</label><input type="text" id="manName" placeholder="f.eks. Grillet kylling"></div>
   <div class="field-row"><label>Mengde (g)</label><input type="number" id="manGrams" value="100"></div>
+  <div class="field-row"><label>Antall</label><input type="number" id="manQty" value="1" min="1" step="1"></div>
   <div class="field-row"><label>Kcal / 100g</label><input type="number" id="manKcal" value="0"></div>
   <div class="field-row"><label>Protein / 100g</label><input type="number" id="manProtein" value="0"></div>
   <button class="save-btn" onclick="saveManualFood()">Lagre</button>
+  <button class="save-btn danger" id="manDeleteBtn" style="display:none;" onclick="deleteEditingFood()">Slett denne varen</button>
 </div>
 
 <!-- Sheet: måltiddetaljer -->
@@ -696,7 +698,7 @@
     const t = { kcal: 0, protein: 0 };
     if (!entry) return t;
     entry.foods.forEach(f => {
-      const m = f.grams / 100;
+      const m = (f.grams / 100) * (f.qty || 1);
       t.kcal += (f.kcal || 0) * m;
       t.protein += (f.protein || 0) * m;
     });
@@ -883,14 +885,22 @@
       list.innerHTML = `<div class="info-note">Ingenting logget her ennå. Legg til mat, eller kopier forrige gang du hadde ${m.name.toLowerCase()}.</div>`;
       return;
     }
-    list.innerHTML = e.foods.map(f => `
+    list.innerHTML = e.foods.map(f => {
+      const qty = f.qty || 1;
+      const mult = (f.grams / 100) * qty;
+      const qtyLabel = qty > 1 ? `${qty} stk × ${f.grams} g` : `${f.grams} g`;
+      return `
       <div class="food-row">
-        <div>
+        <div onclick="editFoodItem('${e.id}','${f.id}')" style="cursor:pointer; flex:1;">
           <div class="pname">${f.name}</div>
-          <div class="pmeta">${f.grams} g · ${Math.round(f.protein * f.grams / 100)} g protein · ${Math.round(f.kcal * f.grams / 100)} kcal</div>
+          <div class="pmeta">${qtyLabel} · ${Math.round(f.protein * mult)} g protein · ${Math.round(f.kcal * mult)} kcal</div>
         </div>
-        <div class="actions"><span onclick="deleteFood('${e.id}','${f.id}')">🗑</span></div>
-      </div>`).join('');
+        <div class="actions">
+          <span onclick="editFoodItem('${e.id}','${f.id}')">✏️</span>
+          <span onclick="deleteFood('${e.id}','${f.id}')">🗑</span>
+        </div>
+      </div>`;
+    }).join('');
   }
   function deleteFood(entryId, foodId) {
     const e = state.entries.find(x => x.id === entryId);
@@ -934,9 +944,11 @@
     openSheet('sheetmeal');
   }
 
-  // ---------- Manuell mat ----------
+  // ---------- Manuell mat (legg til / rediger) ----------
   let manSearchTimeout = null;
   let lastSearchResults = [];
+  let editingFoodEntryId = null;
+  let editingFoodItemId = null;
 
   function onManualSearchInput(value) {
     clearTimeout(manSearchTimeout);
@@ -1034,27 +1046,68 @@
 
   function openManualFood() {
     closeSheet('sheetmethod');
+    editingFoodEntryId = null;
+    editingFoodItemId = null;
+    document.getElementById('manSheetTitle').textContent = 'Skriv inn mat';
     document.getElementById('manSearchInput').value = '';
     document.getElementById('manSearchResults').innerHTML = '';
     document.getElementById('manName').value = '';
     document.getElementById('manGrams').value = 100;
+    document.getElementById('manQty').value = 1;
     document.getElementById('manKcal').value = 0;
     document.getElementById('manProtein').value = 0;
+    document.getElementById('manDeleteBtn').style.display = 'none';
     openSheet('sheetmanual');
   }
+
+  function editFoodItem(entryId, foodId) {
+    const e = state.entries.find(x => x.id === entryId);
+    const f = e && e.foods.find(x => x.id === foodId);
+    if (!f) return;
+    editingFoodEntryId = entryId;
+    editingFoodItemId = foodId;
+    document.getElementById('manSheetTitle').textContent = 'Rediger vare';
+    document.getElementById('manSearchInput').value = '';
+    document.getElementById('manSearchResults').innerHTML = '';
+    document.getElementById('manName').value = f.name;
+    document.getElementById('manGrams').value = f.grams;
+    document.getElementById('manQty').value = f.qty || 1;
+    document.getElementById('manKcal').value = f.kcal;
+    document.getElementById('manProtein').value = f.protein;
+    document.getElementById('manDeleteBtn').style.display = 'block';
+    closeSheet('sheetmeal');
+    openSheet('sheetmanual');
+  }
+
   function saveManualFood() {
     const name = document.getElementById('manName').value.trim();
     if (!name) return;
     const grams = parseFloat(document.getElementById('manGrams').value) || 0;
+    const qty = parseFloat(document.getElementById('manQty').value) || 1;
     const kcal = parseFloat(document.getElementById('manKcal').value) || 0;
     const protein = parseFloat(document.getElementById('manProtein').value) || 0;
-    const e = ensureEntry(activeMealId, state.currentDate);
-    e.foods.push({ id: uid(), name, grams, kcal, protein });
+
+    if (editingFoodEntryId && editingFoodItemId) {
+      const e = state.entries.find(x => x.id === editingFoodEntryId);
+      const f = e && e.foods.find(x => x.id === editingFoodItemId);
+      if (f) { f.name = name; f.grams = grams; f.qty = qty; f.kcal = kcal; f.protein = protein; }
+    } else {
+      const e = ensureEntry(activeMealId, state.currentDate);
+      e.foods.push({ id: uid(), name, grams, qty, kcal, protein });
+    }
     persist();
     closeSheet('sheetmanual');
     render();
     backToMealSheet();
     showToast('Lagret');
+  }
+
+  function deleteEditingFood() {
+    if (!editingFoodEntryId || !editingFoodItemId) return;
+    if (!confirm('Slette denne varen?')) return;
+    deleteFood(editingFoodEntryId, editingFoodItemId);
+    closeSheet('sheetmanual');
+    backToMealSheet();
   }
 
   // ---------- Strekkode-skanning ----------
@@ -1146,13 +1199,15 @@
         <div class="pname">${product.name}</div>
         <div class="pmeta">${product.kcal} kcal · ${product.protein} g protein / 100 g</div>
         <div class="field-row"><label>Mengde (g)</label><input type="number" id="qtyInput" value="100"></div>
+        <div class="field-row"><label>Antall</label><input type="number" id="countInput" value="1" min="1" step="1"></div>
         <button class="save-btn" onclick="saveScannedFood('${product.name}', ${product.kcal}, ${product.protein})">Lagre</button>
       </div>`;
   }
   function saveScannedFood(name, kcal, protein) {
     const grams = parseFloat(document.getElementById('qtyInput').value) || 100;
+    const qty = parseFloat(document.getElementById('countInput').value) || 1;
     const e = ensureEntry(activeMealId, state.currentDate);
-    e.foods.push({ id: uid(), name, grams, kcal, protein });
+    e.foods.push({ id: uid(), name, grams, qty, kcal, protein });
     persist();
     closeSheet('sheetscan');
     render();
