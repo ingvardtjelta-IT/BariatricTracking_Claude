@@ -658,7 +658,7 @@
     vitaminTaken: [], // {date, vitaminId}
     weights: [],      // {id, date, kg}
     appointments: [], // {id, title, date, time, notes}
-    settings: { waterGoal: 1500, proteinGoal: 80, hobbitMode: false, gender: '', age: null, heightCm: null, surgeryDate: '' },
+    settings: { waterGoal: 1500, proteinGoal: 80, hobbitMode: false, gender: '', age: null, heightCm: null, surgeryDate: '', kassalApiKey: '' },
   };
 
   const mockProductDb = {
@@ -950,20 +950,59 @@
     }, 450);
   }
 
+  // Prøver den nyere søkemotoren (Search-a-licious) først — bedre til fritekstsøk,
+  // men fortsatt i beta hos Open Food Facts. Faller tilbake til det eldre,
+  // enklere tekstsøket hvis det ikke gir treff eller kallet feiler.
+  function extractHits(data) {
+    if (Array.isArray(data.hits)) return data.hits;
+    if (Array.isArray(data.products)) return data.products;
+    if (Array.isArray(data.results)) return data.results;
+    return [];
+  }
+  function extractNutrients(item) {
+    const n = item.nutriments || {};
+    const kcal = n['energy-kcal_100g'] ?? item['nutriments.energy-kcal_100g'] ?? 0;
+    const protein = n['proteins_100g'] ?? item['nutriments.proteins_100g'] ?? 0;
+    return { kcal: Math.round(kcal), protein: Math.round(protein * 10) / 10 };
+  }
+
   async function searchFoodDb(query) {
+    if (state.settings.kassalApiKey) {
+      try {
+        const res = await fetch(`https://kassal.app/api/v1/products?search=${encodeURIComponent(query)}&size=6`, {
+          headers: { Authorization: `Bearer ${state.settings.kassalApiKey}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const mapped = (data.data || []).map(p => ({ name: p.name, ...extractKassalNutrition(p) }));
+          if (mapped.length) return mapped;
+        }
+      } catch (err) {
+        console.warn('Kassal.app-søk feilet, prøver Open Food Facts i stedet.', err);
+      }
+    }
     try {
-      const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=6&fields=product_name,nutriments`;
+      const url = `https://search.openfoodfacts.org/search?q=${encodeURIComponent(query)}&langs=no,en&page_size=6&fields=product_name,nutriments`;
       const res = await fetch(url);
-      const data = await res.json();
-      return (data.products || [])
-        .filter(p => p.product_name)
-        .map(p => ({
-          name: p.product_name,
-          kcal: Math.round((p.nutriments && p.nutriments['energy-kcal_100g']) || 0),
-          protein: Math.round(((p.nutriments && p.nutriments['proteins_100g']) || 0) * 10) / 10,
-        }));
+      if (res.ok) {
+        const data = await res.json();
+        const mapped = extractHits(data)
+          .filter(h => h.product_name)
+          .map(h => ({ name: h.product_name, ...extractNutrients(h) }));
+        if (mapped.length) return mapped;
+      }
     } catch (err) {
-      console.warn('Søk mot Open Food Facts feilet.', err);
+      console.warn('Search-a-licious feilet, prøver eldre søk i stedet.', err);
+    }
+    try {
+      const url2 = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=6&fields=product_name,nutriments`;
+      const res2 = await fetch(url2);
+      const data2 = await res2.json();
+      return (data2.products || [])
+        .filter(p => p.product_name)
+        .map(p => ({ name: p.product_name, ...extractNutrients(p) }));
+    } catch (err) {
+      console.warn('Eldre søk feilet også.', err);
       return [];
     }
   }
@@ -1038,10 +1077,45 @@
     if (scannerInstance) { scannerInstance.stop().catch(() => {}); scannerInstance = null; }
     lookupProduct(decodedText).then(showProductHit);
   }
+  // Trekker ut kcal og protein fra Kassal.app sitt nutrition-felt (antar verdier per 100 g,
+  // som er standard på norske varedeklarasjoner). Konverterer kJ til kcal ved behov.
+  function extractKassalNutrition(product) {
+    let list = product.nutrition;
+    if (!list) return { kcal: 0, protein: 0 };
+    if (!Array.isArray(list)) list = [list];
+    let kcal = 0, protein = 0;
+    list.forEach(n => {
+      const label = ((n.code || '') + ' ' + (n.display_name || '')).toLowerCase();
+      const unit = (n.unit || '').toLowerCase();
+      if (label.includes('protein')) protein = n.amount;
+      else if (label.includes('energi') || label.includes('kcal') || label.includes('energy')) {
+        kcal = unit.includes('kj') ? n.amount / 4.184 : n.amount;
+      }
+    });
+    return { kcal: Math.round(kcal), protein: Math.round(protein * 10) / 10 };
+  }
+
   // Slår opp i Open Food Facts (åpen, gratis, ingen nøkkel trengs for lesing).
   // Faller tilbake til den lille lokale listen hvis varen ikke finnes der,
   // eller hvis kallet feiler (f.eks. ingen nett, eller blokkert i en sandkasse-visning).
   async function lookupProduct(ean) {
+    if (state.settings.kassalApiKey) {
+      try {
+        const res = await fetch(`https://kassal.app/api/v1/products/ean/${ean}`, {
+          headers: { Authorization: `Bearer ${state.settings.kassalApiKey}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const list = data.data || [];
+          if (list.length) {
+            const p = list[0];
+            return { name: p.name, ...extractKassalNutrition(p) };
+          }
+        }
+      } catch (err) {
+        console.warn('Kassal.app-oppslag feilet, prøver Open Food Facts.', err);
+      }
+    }
     try {
       const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${ean}.json?fields=product_name,nutriments`);
       const data = await res.json();
@@ -1304,6 +1378,16 @@
   // ============================================================
   function renderSettingsTab() {
     document.getElementById('mainArea').innerHTML = `
+      <div class="settings-block">
+        <h3>Matvaredatabase</h3>
+        <div class="sub" style="margin-bottom:12px;">
+          Legg inn din egen Kassal.app API-nøkkel for bedre norsk søk og strekkode-treff.
+          Lagres kun her i appen, aldri i selve kildekoden.
+        </div>
+        <div class="field-row"><label>Kassal.app-nøkkel</label><input type="password" value="${state.settings.kassalApiKey || ''}" onchange="changeSetting('kassalApiKey', this.value)" placeholder="lim inn nøkkel her"></div>
+        <div class="info-note">${state.settings.kassalApiKey ? 'Kassal.app brukes nå som førstevalg. Open Food Facts brukes som reserve.' : 'Uten nøkkel brukes Open Food Facts (internasjonal database).'}</div>
+      </div>
+
       <div class="settings-block">
         <h3>Om deg</h3>
         <div class="field-row"><label>Kjønn</label>
