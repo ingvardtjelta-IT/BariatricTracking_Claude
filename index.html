@@ -483,7 +483,10 @@
   <span class="close-x" onclick="closeSubSheet('sheetmanual')">Lukk</span>
   <div class="sheet-handle"></div>
   <h2>Skriv inn mat</h2>
-  <div class="sub">Næringsinnhold per 100 g.</div>
+  <div class="sub">Søk i matvaredatabasen, eller fyll inn manuelt under.</div>
+  <div class="field-row"><label>Søk</label><input type="text" id="manSearchInput" placeholder="f.eks. naturell yoghurt" oninput="onManualSearchInput(this.value)"></div>
+  <div id="manSearchResults"></div>
+  <div class="section-label" style="margin-top:18px;">Detaljer (juster ved behov)</div>
   <div class="field-row"><label>Navn</label><input type="text" id="manName" placeholder="f.eks. Grillet kylling"></div>
   <div class="field-row"><label>Mengde (g)</label><input type="number" id="manGrams" value="100"></div>
   <div class="field-row"><label>Kcal / 100g</label><input type="number" id="manKcal" value="0"></div>
@@ -932,8 +935,68 @@
   }
 
   // ---------- Manuell mat ----------
+  let manSearchTimeout = null;
+  let lastSearchResults = [];
+
+  function onManualSearchInput(value) {
+    clearTimeout(manSearchTimeout);
+    const q = value.trim();
+    const el = document.getElementById('manSearchResults');
+    if (q.length < 3) { el.innerHTML = ''; return; }
+    el.innerHTML = '<div class="info-note">Søker …</div>';
+    manSearchTimeout = setTimeout(async () => {
+      const results = await searchFoodDb(q);
+      renderManualSearchResults(results);
+    }, 450);
+  }
+
+  async function searchFoodDb(query) {
+    try {
+      const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=6&fields=product_name,nutriments`;
+      const res = await fetch(url);
+      const data = await res.json();
+      return (data.products || [])
+        .filter(p => p.product_name)
+        .map(p => ({
+          name: p.product_name,
+          kcal: Math.round((p.nutriments && p.nutriments['energy-kcal_100g']) || 0),
+          protein: Math.round(((p.nutriments && p.nutriments['proteins_100g']) || 0) * 10) / 10,
+        }));
+    } catch (err) {
+      console.warn('Søk mot Open Food Facts feilet.', err);
+      return [];
+    }
+  }
+
+  function renderManualSearchResults(results) {
+    lastSearchResults = results;
+    const el = document.getElementById('manSearchResults');
+    if (!results.length) {
+      el.innerHTML = '<div class="info-note">Ingen treff. Fyll inn manuelt under i stedet.</div>';
+      return;
+    }
+    el.innerHTML = results.map((r, i) => `
+      <div class="option-btn" onclick="pickManualSearchResult(${i})">
+        <span class="ic">🔎</span>
+        <span>${r.name}</span>
+        <span style="margin-left:auto; color:var(--ink-soft); font-size:12px; white-space:nowrap;">${r.kcal} kcal · ${r.protein} g</span>
+      </div>`).join('');
+  }
+
+  function pickManualSearchResult(i) {
+    const r = lastSearchResults[i];
+    if (!r) return;
+    document.getElementById('manName').value = r.name;
+    document.getElementById('manKcal').value = r.kcal;
+    document.getElementById('manProtein').value = r.protein;
+    document.getElementById('manSearchResults').innerHTML = '';
+    document.getElementById('manSearchInput').value = '';
+  }
+
   function openManualFood() {
     closeSheet('sheetmethod');
+    document.getElementById('manSearchInput').value = '';
+    document.getElementById('manSearchResults').innerHTML = '';
     document.getElementById('manName').value = '';
     document.getElementById('manGrams').value = 100;
     document.getElementById('manKcal').value = 0;
