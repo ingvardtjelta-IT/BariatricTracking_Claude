@@ -1131,20 +1131,30 @@
     lookupProduct(decodedText).then(showProductHit);
   }
   // Trekker ut kcal og protein fra Kassal.app sitt nutrition-felt (antar verdier per 100 g,
-  // som er standard på norske varedeklarasjoner). Konverterer kJ til kcal ved behov.
+  // som er standard på norske varedeklarasjoner). Norske varer oppgir ofte energi i BÅDE
+  // kJ og kcal som to separate oppføringer — vi prioriterer en oppføring som eksplisitt er
+  // merket med enhet "kcal", og konverterer fra kJ kun som reserve, for å unngå å blande dem.
   function extractKassalNutrition(product) {
     let list = product.nutrition;
     if (!list) return { kcal: 0, protein: 0 };
     if (!Array.isArray(list)) list = [list];
-    let kcal = 0, protein = 0;
+    console.log('Kassal.app nutrition (rådata) for', product.name, list);
+
+    let kcalFromKcalUnit = null;
+    let kcalFromKjUnit = null;
+    let protein = 0;
+
     list.forEach(n => {
       const label = ((n.code || '') + ' ' + (n.display_name || '')).toLowerCase();
       const unit = (n.unit || '').toLowerCase();
-      if (label.includes('protein')) protein = n.amount;
-      else if (label.includes('energi') || label.includes('kcal') || label.includes('energy')) {
-        kcal = unit.includes('kj') ? n.amount / 4.184 : n.amount;
+      if (label.includes('protein')) { protein = n.amount; return; }
+      if (label.includes('energi') || label.includes('energy') || label.includes('kcal') || label.includes('kj')) {
+        if (unit.includes('kcal')) kcalFromKcalUnit = n.amount;
+        else if (unit.includes('kj')) kcalFromKjUnit = n.amount / 4.184;
       }
     });
+
+    const kcal = kcalFromKcalUnit != null ? kcalFromKcalUnit : (kcalFromKjUnit != null ? kcalFromKjUnit : 0);
     return { kcal: Math.round(kcal), protein: Math.round(protein * 10) / 10 };
   }
 
