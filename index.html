@@ -1,1620 +1,208 @@
 <!DOCTYPE html>
-<html lang="no">
+<html lang="nb">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BariatriskReise – prototype</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Personvernerklæring — Bariatrisk Reise</title>
 <style>
   :root{
-    --bg: #F6F3EC;
-    --panel: #FFFFFF;
-    --ink: #1F2E28;
-    --ink-soft: #5B6A63;
-    --line: #E4DFD3;
-    --forest: #2F4A3E;
-    --forest-dim: #435F52;
-    --clay: #C1622E;
-    --clay-soft: #F1DDCC;
-    --ok: #3E7A5C;
-    --radius: 14px;
+    --bg:#F6F3EC; --panel:#FFFFFF; --ink:#1F2E28; --soft:#5B6A63;
+    --line:#E4DFD3; --forest:#2F4A3E; --clay:#C1622E; --clay-soft:#F1DDCC;
   }
-  *{ box-sizing: border-box; }
-  html,body{ margin:0; padding:0; }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#141F1A; --panel:#1C2B24; --ink:#E9E5D9; --soft:#9AAAA1;
+      --line:#2C3D34; --forest:#82BC9E; --clay:#E28E55; --clay-soft:#3A2A1F;
+    }
+  }
+  *{ box-sizing:border-box }
   body{
-    background: var(--bg);
-    color: var(--ink);
-    font-family: 'Iowan Old Style', 'Georgia', serif;
-    max-width: 480px;
-    margin: 0 auto;
-    min-height: 100vh;
-    padding-bottom: 40px;
+    background:var(--bg); color:var(--ink); margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    font-size:16px; line-height:1.65;
   }
-  header{
-    padding: 28px 20px 18px;
-    border-bottom: 1px solid var(--line);
+  .wrap{ max-width:680px; margin:0 auto; padding:48px 22px 80px }
+  h1{
+    font-family:'Iowan Old Style','Palatino Linotype',Georgia,serif;
+    font-size:30px; color:var(--forest); margin:0 0 6px; line-height:1.15;
   }
-  header .brand{
-    font-family: -apple-system, 'Segoe UI', sans-serif;
-    font-size: 11px;
-    letter-spacing: .08em;
-    color: var(--clay);
-    font-weight: 700;
-    margin-bottom: 8px;
+  .sist{ color:var(--soft); font-size:14px; margin:0 0 32px }
+  h2{
+    font-family:'Iowan Old Style','Palatino Linotype',Georgia,serif;
+    font-size:20px; color:var(--forest); margin:34px 0 10px;
   }
-  header .day{
-    font-family: -apple-system, 'Segoe UI', sans-serif;
-    font-size: 12.5px;
-    letter-spacing: .02em;
-    color: var(--ink-soft);
-    margin-bottom: 6px;
-    display:flex; align-items:center; justify-content:space-between;
+  p, li{ max-width:62ch }
+  a{ color:var(--clay) }
+  .kort{
+    background:var(--panel); border:1px solid var(--line);
+    border-radius:14px; padding:18px 20px; margin:20px 0;
   }
-  header .day .datenav{ display:flex; align-items:center; gap:10px; }
-  header .day .datenav button{
-    border:none; background:none; color: var(--ink-soft);
-    font-size:15px; cursor:pointer; padding:2px 4px;
-  }
-  header h1{
-    margin: 0;
-    font-size: 26px;
-    font-weight: 600;
-    letter-spacing: -0.01em;
-  }
-  .summary{
-    display: flex;
-    gap: 14px;
-    margin-top: 16px;
-    font-family: -apple-system, 'Segoe UI', sans-serif;
-  }
-  .summary .stat{
-    flex: 1;
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    padding: 10px 12px;
-  }
-  .summary .stat .num{
-    font-size: 19px;
-    font-weight: 700;
-    color: var(--forest);
-  }
-  .summary .stat .lbl{
-    font-size: 11px;
-    color: var(--ink-soft);
-    margin-top: 2px;
-  }
-
-  .tabbar{
-    display:flex; gap:6px;
-    padding: 14px 20px 0;
-    font-family: -apple-system, 'Segoe UI', sans-serif;
-  }
-  .tabbtn{
-    flex:1;
-    text-align:center;
-    padding: 9px 6px;
-    border-radius: 999px;
-    font-size: 12.5px;
-    color: var(--ink-soft);
-    background: transparent;
-    border: 1px solid transparent;
-    cursor:pointer;
-  }
-  .tabbtn.active{
-    background: var(--panel);
-    border-color: var(--line);
-    color: var(--forest);
-    font-weight: 700;
-  }
-
-  main{ padding: 18px 20px; }
-
-  .quickrow{
-    display: flex;
-    gap: 10px;
-    margin-bottom: 22px;
-  }
-  .quickbtn{
-    flex: 1;
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    padding: 12px 8px;
-    text-align: center;
-    font-family: -apple-system, 'Segoe UI', sans-serif;
-    font-size: 12.5px;
-    color: var(--forest-dim);
-    cursor: pointer;
-  }
-  .quickbtn.complete{
-    border-color: var(--ok);
-    background: #F4F9F6;
-  }
-  .quickbtn:active{ background: var(--clay-soft); }
-  .quickbtn .ic{ font-size: 18px; display:block; margin-bottom: 4px; }
-
-  .section-label{
-    font-family: -apple-system, 'Segoe UI', sans-serif;
-    font-size: 12px;
-    color: var(--ink-soft);
-    margin: 22px 0 10px;
-    display:flex; justify-content:space-between; align-items:center;
-  }
-  .section-label .badge{
-    background: var(--clay-soft);
-    color: var(--clay);
-    border-radius: 999px;
-    padding: 3px 9px;
-    font-size: 11px;
-  }
-
-  .meal-card{
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    padding: 14px 16px;
-    margin-bottom: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    cursor: pointer;
-  }
-  .meal-card.logged{
-    border-color: var(--ok);
-    background: #F4F9F6;
-  }
-  .meal-card .left .name{
-    font-size: 17px;
-    font-weight: 600;
-  }
-  .meal-card .left .name .time{
-    font-family: -apple-system, 'Segoe UI', sans-serif;
-    font-size: 11.5px;
-    color: var(--ink-soft);
-    font-weight: 400;
-    margin-left: 8px;
-  }
-  .meal-card .left .desc{
-    font-family: -apple-system, 'Segoe UI', sans-serif;
-    font-size: 12.5px;
-    color: var(--ink-soft);
-    margin-top: 3px;
-  }
-  .meal-card .status{
-    font-family: -apple-system, 'Segoe UI', sans-serif;
-    font-size: 20px;
-    color: var(--line);
-  }
-  .meal-card.logged .status{ color: var(--ok); }
-
-  /* Modal / sheet */
-  .sheet-overlay{
-    display:none;
-    position: fixed; inset:0;
-    background: rgba(31,46,40,0.45);
-    z-index: 50;
-  }
-  .sheet-overlay.open{ display:block; }
-  .sheet{
-    position: fixed;
-    left: 50%; bottom: 0;
-    transform: translateX(-50%);
-    width: 100%;
-    max-width: 480px;
-    background: var(--bg);
-    border-radius: 20px 20px 0 0;
-    padding: 18px 20px 26px;
-    z-index: 51;
-    max-height: 86vh;
-    overflow-y: auto;
-  }
-  .sheet-handle{
-    width: 36px; height: 4px;
-    background: var(--line);
-    border-radius: 4px;
-    margin: 0 auto 14px;
-  }
-  .sheet h2{
-    margin: 0 0 4px;
-    font-size: 20px;
-  }
-  .sheet .sub{
-    font-family: -apple-system, 'Segoe UI', sans-serif;
-    font-size: 12.5px;
-    color: var(--ink-soft);
-    margin-bottom: 16px;
-  }
-
-  .option-btn{
-    width: 100%;
-    text-align: left;
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    padding: 14px 16px;
-    margin-bottom: 10px;
-    font-family: -apple-system, 'Segoe UI', sans-serif;
-    font-size: 14.5px;
-    color: var(--ink);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-  .option-btn .ic{ font-size: 18px; }
-  .option-btn:active{ background: var(--clay-soft); }
-
-  #reader{
-    width: 100%;
-    border-radius: var(--radius);
-    overflow: hidden;
-    margin-bottom: 14px;
-    border: 1px solid var(--line);
-  }
-
-  .product-hit, .food-row{
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    padding: 14px 16px;
-    margin-top: 10px;
-  }
-  .food-row{
-    display:flex; align-items:center; justify-content:space-between;
-  }
-  .food-row .actions{ display:flex; gap:10px; font-size:16px; }
-  .food-row .actions span{ cursor:pointer; }
-  .product-hit .pname, .food-row .pname{ font-weight: 600; font-size: 15.5px; }
-  .product-hit .pmeta, .food-row .pmeta{
-    font-family: -apple-system, 'Segoe UI', sans-serif;
-    font-size: 12.5px;
-    color: var(--ink-soft);
-    margin-top: 4px;
-    line-height: 1.5;
-  }
-  .field-row{
-    display:flex; align-items:center; gap:10px;
-    margin-top: 10px;
-    font-family: -apple-system, 'Segoe UI', sans-serif;
-  }
-  .field-row label{ font-size: 12.5px; color: var(--ink-soft); flex: 0 0 110px; }
-  .field-row input{
-    flex:1;
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    padding: 8px 10px;
-    font-size: 14px;
-    font-family: inherit;
-  }
-
-  .save-btn{
-    width: 100%;
-    background: var(--forest);
-    color: white;
-    border: none;
-    border-radius: var(--radius);
-    padding: 14px;
-    font-size: 15px;
-    font-weight: 600;
-    font-family: -apple-system, 'Segoe UI', sans-serif;
-    margin-top: 16px;
-    cursor: pointer;
-  }
-  .save-btn:active{ background: var(--forest-dim); }
-  .save-btn.secondary{
-    background: var(--panel);
-    color: var(--forest-dim);
-    border: 1px solid var(--line);
-  }
-  .save-btn.danger{
-    background: #FCEFEC;
-    color: var(--clay);
-    border: 1px solid var(--clay-soft);
-  }
-  .btnrow{ display:flex; gap:10px; }
-  .btnrow .save-btn{ margin-top: 16px; }
-
-  .close-x{
-    position: absolute;
-    top: 16px; right: 18px;
-    font-family: -apple-system, 'Segoe UI', sans-serif;
-    font-size: 13px;
-    color: var(--ink-soft);
-    cursor: pointer;
-  }
-
-  .api-note{
-    font-family: -apple-system, 'Segoe UI', sans-serif;
-    font-size: 11.5px;
-    color: var(--clay);
-    background: var(--clay-soft);
-    border-radius: 10px;
-    padding: 8px 10px;
-    margin-top: 10px;
-    line-height: 1.5;
-  }
-  .info-note{
-    font-family: -apple-system, 'Segoe UI', sans-serif;
-    font-size: 11.5px;
-    color: var(--forest-dim);
-    background: #F4F9F6;
-    border-radius: 10px;
-    padding: 10px 12px;
-    margin-top: 10px;
-    line-height: 1.6;
-  }
-
-  .toast{
-    position: fixed;
-    left: 50%; bottom: 24px;
-    transform: translateX(-50%);
-    background: var(--forest);
-    color: white;
-    padding: 10px 18px;
-    border-radius: 999px;
-    font-family: -apple-system, 'Segoe UI', sans-serif;
-    font-size: 13px;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity .25s ease;
-    z-index: 60;
-  }
-  .toast.show{ opacity: 1; }
-
-  /* Weight tab */
-  .weight-hero{
-    background: var(--forest);
-    color: white;
-    border-radius: var(--radius);
-    padding: 20px;
-    margin-bottom: 16px;
-  }
-  .weight-hero .lbl{
-    font-family: -apple-system, 'Segoe UI', sans-serif;
-    font-size: 12px;
-    opacity: .8;
-  }
-  .weight-hero .num{ font-size: 36px; font-weight: 700; margin-top: 4px; }
-  .history-row{
-    display:flex; justify-content:space-between;
-    padding: 11px 2px;
-    border-bottom: 1px solid var(--line);
-    font-family: -apple-system, 'Segoe UI', sans-serif;
-    font-size: 13.5px;
-  }
-  .history-row:last-child{ border-bottom:none; }
-
-  /* Settings tab */
-  .settings-block{
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    padding: 16px;
-    margin-bottom: 16px;
-  }
-  .settings-block h3{
-    margin: 0 0 12px;
-    font-size: 16px;
-  }
-  .slot-row{
-    display:flex; gap:8px; align-items:center; margin-bottom: 8px;
-    font-family: -apple-system, 'Segoe UI', sans-serif;
-  }
-  .slot-row input[type=text]{
-    flex:1; border:1px solid var(--line); border-radius:8px; padding:8px 10px; font-size:13.5px;
-  }
-  .slot-row input[type=time]{
-    width: 96px; border:1px solid var(--line); border-radius:8px; padding:8px; font-size:13px;
-  }
-  .slot-row .del{
-    color: var(--clay); cursor:pointer; font-size:16px; padding: 4px 6px;
-  }
-  .range-label{
-    display:flex; justify-content:space-between;
-    font-family: -apple-system, 'Segoe UI', sans-serif;
-    font-size: 12.5px; color: var(--ink-soft);
-    margin-bottom: 4px;
-  }
-  input[type=range]{ width:100%; accent-color: var(--forest); margin-bottom: 14px; }
-  .toggle-row{
-    display:flex; justify-content:space-between; align-items:center;
-    font-family: -apple-system, 'Segoe UI', sans-serif;
-    font-size: 13.5px;
-  }
-  .toggle-row .desc{ font-size:11.5px; color:var(--ink-soft); margin-top:2px; }
-  .switch{
-    width: 46px; height: 27px; border-radius: 999px; border:none;
-    background: #D9D3C4; padding: 3px; cursor:pointer;
-  }
-  .switch i{
-    display:block; width:21px; height:21px; border-radius:50%;
-    background:white; transition: transform .2s ease;
-  }
-  .switch.on{ background: var(--forest); }
-  .switch.on i{ transform: translateX(19px); }
+  .kort p:first-child{ margin-top:0 } .kort p:last-child{ margin-bottom:0 }
+  table{ width:100%; border-collapse:collapse; margin:14px 0; font-size:15px }
+  th,td{ text-align:left; padding:9px 10px; border-bottom:1px solid var(--line); vertical-align:top }
+  th{ font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--soft) }
+  code{ background:var(--panel); border:1px solid var(--line); border-radius:4px; padding:1px 5px; font-size:14px }
+  footer{ margin-top:48px; padding-top:20px; border-top:1px solid var(--line); color:var(--soft); font-size:14px }
 </style>
 </head>
 <body>
+<div class="wrap">
 
-<header id="headerArea"></header>
-<div class="tabbar" id="tabbar"></div>
-<main id="mainArea"></main>
+<h1>Personvernerklæring for Bariatrisk Reise</h1>
+<p class="sist">Sist oppdatert 24. september 2026</p>
 
-<div class="toast" id="toast"></div>
-
-<!-- Sheet: velg loggemetode -->
-<div class="sheet-overlay" id="overlaymethod" onclick="closeSubSheet('sheetmethod')"></div>
-<div class="sheet" id="sheetmethod" style="display:none;">
-  <span class="close-x" onclick="closeSubSheet('sheetmethod')">Lukk</span>
-  <div class="sheet-handle"></div>
-  <h2>Legg til mat</h2>
-  <div class="sub" id="methodSub">Hvordan vil du legge inn maten?</div>
-
-  <div class="option-btn" onclick="openScanner()">
-    <span class="ic">📷</span> Skann strekkode
-  </div>
-  <div class="option-btn" onclick="openManualFood()">
-    <span class="ic">✏️</span> Skriv inn manuelt
-  </div>
-  <div class="option-btn" onclick="openTemplates()">
-    <span class="ic">📋</span> Bruk lagret mal
-  </div>
+<h2>Kort fortalt</h2>
+<div class="kort">
+  <p>Bariatrisk Reise lagrer alt du fører inn — mat, drikke, vitaminer,
+  medisiner, vekt og kroppsmål — <strong>bare på din egen telefon</strong>.
+  Det finnes ingen brukerkonto, ingen server som tar imot loggen din, ingen
+  analyseverktøy og ingen annonser.</p>
+  <p>Noen ting forlater likevel telefonen, og du bør vite om dem: søkeord når du
+  søker etter matvarer, strekkodenummer når du skanner, og teknisk
+  diagnostikkinformasjon fra Googles skannebibliotek. Bruker du
+  <strong>AI-innlesing av kostplanen</strong>, sendes bildene du velger til AI-lesing
+  — men bare etter at du har samtykket. Det står forklart under.</p>
 </div>
 
-<!-- Sheet: skanner -->
-<div class="sheet-overlay" id="overlayscan" onclick="closeSubSheet('sheetscan')"></div>
-<div class="sheet" id="sheetscan" style="display:none;">
-  <span class="close-x" onclick="closeSubSheet('sheetscan')">Lukk</span>
-  <div class="sheet-handle"></div>
-  <h2>Skann strekkode</h2>
-  <div class="sub">Rett kameraet mot varens EAN-strekkode.</div>
-  <div id="reader"></div>
-  <div id="scanResult"></div>
-  <div class="api-note">
-    Slår opp varen i Open Food Facts (åpen, gratis matvaredatabase — ingen nøkkel trengs).
-    Finnes ikke varen der, brukes en liten lokal reserveliste i denne prototypen —
-    prøv EAN 7020097009523 eller 7035620035004 for å se den i praksis.
-  </div>
+<h2>Hvem er ansvarlig</h2>
+<p>Appen er utviklet og drives av Ingvard Tjelta, Norge.
+Spørsmål om personvern kan sendes til
+<a href="mailto:ingvard.tjelta@gmail.com">ingvard.tjelta@gmail.com</a>.</p>
+<p>Utvikleren mottar eller lagrer <strong>ingen</strong> av opplysningene du fører
+inn. De ligger på enheten din, under din kontroll. Det eneste unntaket er
+AI-innlesingen: da går bildene du velger gjennom en tjeneste utvikleren driver, som
+sender dem videre uten å lagre dem (se under).</p>
+
+<h2>Hva som lagres, og hvor</h2>
+<p>Følgende lagres lokalt på telefonen, i appens eget lagringsområde:</p>
+<ul>
+  <li>Måltidslogg med matvarer, mengder og næringsinnhold</li>
+  <li>Drikke, vitaminer og tilskudd</li>
+  <li>Medisiner du selv legger inn, med dose og tidspunkt</li>
+  <li>Vekt, kroppsmål og høyde</li>
+  <li>Operasjonsdato, inngrep, sykehus, alder og kjønn hvis du oppgir det</li>
+  <li>Bilder du tar av din egen kostplan</li>
+  <li>Dagsnotater og tid brukt på måltider</li>
+  <li>Din egen API-nøkkel til Kassal.app, hvis du legger inn en</li>
+  <li>Om og når du har samtykket til AI-innlesing</li>
+  <li>En tilfeldig enhets-id, laget av appen, som brukes til å begrense hvor mange
+      AI-innlesinger som kan gjøres per dag. Den sier ingenting om hvem du er</li>
+</ul>
+<p>Dette er helseopplysninger. De blir liggende på enheten til du sletter dem
+selv, eller sletter appen. De følger med i vanlig iPhone-sikkerhetskopi hvis du
+har det slått på, og er da underlagt Apples vilkår for iCloud.</p>
+
+<h2>Hva som sendes ut av appen</h2>
+<table>
+  <tr><th>Til hvem</th><th>Hva</th><th>Når</th></tr>
+  <tr>
+    <td><a href="https://kassal.app">Kassal.app</a></td>
+    <td>Søkeordet du skriver, eller strekkodenummeret du skanner, sammen med
+        din egen API-nøkkel</td>
+    <td>Bare når du søker eller skanner, og bare hvis du har lagt inn en nøkkel</td>
+  </tr>
+  <tr>
+    <td><a href="https://world.openfoodfacts.org">Open Food Facts</a></td>
+    <td>Søkeordet eller strekkodenummeret</td>
+    <td>Bare når du søker eller skanner. Appen gjør i tillegg ett oppslag ved
+        oppstart for å se om nettilgang virker</td>
+  </tr>
+  <tr>
+    <td>Google ML Kit</td>
+    <td>Teknisk informasjon om enheten (modell, operativsystemversjon,
+        maskinvare) og bruks- og ytelsesdata for skannefunksjonen</td>
+    <td>Når du bruker strekkodeskanneren</td>
+  </tr>
+  <tr>
+    <td>Utviklerens lesetjeneste, driftet hos
+        <a href="https://www.cloudflare.com/privacypolicy/">Cloudflare</a></td>
+    <td>Bildene av kostplanen du velger, og den tilfeldige enhets-id-en.
+        Tjenesten sender bildene videre til Anthropic og lagrer dem ikke. Den teller
+        bare antall innlesinger per enhets-id og dag, og telleren slettes etter to døgn</td>
+    <td>Bare når du trykker «Les planen», og bare etter at du har samtykket</td>
+  </tr>
+  <tr>
+    <td><a href="https://www.anthropic.com/legal/privacy">Anthropic</a> (Claude), USA</td>
+    <td>Bildene av kostplanen. Anthropic leser dem og sender tilbake en tekst med
+        faser, regler og tilskudd, som du går gjennom før noe legges inn</td>
+    <td>Samme som over</td>
+  </tr>
+</table>
+<p><strong>Om AI-innlesingen.</strong> Et bilde av en kostplan fra sykehuset er en
+helseopplysning, og kan inneholde navn, fødselsnummer og adresse. Dekk over det før du
+tar bildet. Anthropic sletter det som sendes til dem innen 30 dager, med unntak av
+innhold som sikkerhetssystemene deres flagger, eller som loven krever at de beholder,
+og bruker det ikke til å trene modellene sine. Se
+<a href="https://privacy.claude.com/en/articles/7996866-how-long-do-you-store-my-organization-s-data">Anthropics
+oppbevaringsregler</a>. Anthropic holder til i USA, så bildene behandles utenfor EØS.</p>
+<p>Selve strekkodegjenkjenningen skjer på enheten — kamerabildet sendes ikke
+noe sted. Men Googles bibliotek samler diagnostikk- og bruksdata, slik Google
+selv beskriver i
+<a href="https://developers.google.com/ml-kit/ios-data-disclosure">ML Kits
+dataerklæring</a> og
+<a href="https://developers.google.com/ml-kit/terms">vilkår og personvern</a>.</p>
+<p>Ingen av disse mottakerne får måltidsloggen, vekten, kroppsmålene,
+medisinene eller notatene dine. De får bare det som står i tabellen.</p>
+
+<h2>Hva appen ikke gjør</h2>
+<ul>
+  <li>Ingen brukerkonto og ingen innlogging</li>
+  <li>Ingen server som lagrer helseopplysningene dine</li>
+  <li>Ingen analyseverktøy, ingen sporing på tvers av apper eller nettsteder</li>
+  <li>Ingen annonser og ingen deling eller salg av data</li>
+  <li>Ingen kobling mot helsevesenet, Helsenorge eller Apple Health</li>
+  <li>Ingen kostråd. Appen gjengir din egen plan fra sykehuset og foreslår
+      aldri doser eller kostendringer</li>
+</ul>
+
+<h2>Rettslig grunnlag</h2>
+<p>Behandlingen skjer lokalt på din enhet, på ditt eget initiativ og under din
+kontroll. Utvikleren har ingen tilgang til opplysningene.</p>
+<p>For de utgående kallene i tabellen over er grunnlaget ditt eget samtykke,
+gitt ved at du selv velger å søke, skanne eller legge inn en API-nøkkel. Bruker
+du ikke søk eller skanning, sendes ingenting — bortsett fra det ene
+oppstartsoppslaget mot Open Food Facts, som ikke inneholder opplysninger om deg.</p>
+<p>For AI-innlesingen er grunnlaget ditt <strong>uttrykkelige samtykke</strong>
+(personvernforordningen artikkel 9 nr. 2 bokstav a), som du gir i appen før første
+innlesing. Du kan trekke det tilbake når som helst under ⋯ → Min plan.</p>
+
+<h2>Dine valg og rettigheter</h2>
+<p>Fordi alt ligger på enheten, har du full kontroll direkte i appen:</p>
+<ul>
+  <li><strong>Se og endre</strong> alt du har lagt inn, hvor som helst i appen</li>
+  <li><strong>Ta med deg dataene</strong> med «Eksporter backup (.json)» under
+      ⋯ → Data og backup. API-nøkkelen følger med vilje <em>ikke</em> med,
+      slik at filen trygt kan deles</li>
+  <li><strong>Slette alt</strong> med «Nullstill alle data», eller ved å slette
+      appen</li>
+  <li><strong>Slutte å sende noe ut</strong> ved å ikke bruke søk, skanning og
+      AI-innlesing. Fjerner du Kassal-nøkkelen, brukes den ikke mer</li>
+  <li><strong>Trekke samtykket</strong> til AI-innlesing under ⋯ → Min plan. Det
+      som alt er lagt inn fra planen din, blir liggende til du sletter det</li>
+</ul>
+<p>Etter personvernforordningen (GDPR) har du rett til innsyn, retting,
+sletting, begrensning og dataportabilitet. Siden utvikleren ikke har tilgang
+til opplysningene, utøver du disse rettighetene selv i appen. Ønsker du å
+klage, kan du kontakte Datatilsynet.</p>
+
+<h2>Barn</h2>
+<p>Appen er laget for voksne som skal gjennom eller har gjennomgått bariatrisk
+kirurgi, og er ikke rettet mot barn.</p>
+
+<h2>Endringer</h2>
+<p>Endres denne erklæringen, oppdateres datoen øverst. Vesentlige endringer vil
+bli opplyst om i appen.</p>
+
+<h2>Kontakt</h2>
+<p>Ingvard Tjelta, Norge<br>
+<a href="mailto:ingvard.tjelta@gmail.com">ingvard.tjelta@gmail.com</a></p>
+
+<footer>
+  Bariatrisk Reise er et hjelpemiddel til å holde oversikt, ikke medisinsk
+  rådgivning. Appen erstatter ikke oppfølgingen fra sykehuset, fastlegen eller
+  ernæringsfysiologen din.
+</footer>
+
 </div>
-
-<!-- Sheet: manuell mat-registrering -->
-<div class="sheet-overlay" id="overlaymanual" onclick="closeSubSheet('sheetmanual')"></div>
-<div class="sheet" id="sheetmanual" style="display:none;">
-  <span class="close-x" onclick="closeSubSheet('sheetmanual')">Lukk</span>
-  <div class="sheet-handle"></div>
-  <h2 id="manSheetTitle">Skriv inn mat</h2>
-  <div class="sub">Søk i matvaredatabasen, eller fyll inn manuelt under.</div>
-  <div class="field-row"><label>Søk</label><input type="text" id="manSearchInput" placeholder="f.eks. naturell yoghurt" oninput="onManualSearchInput(this.value)"></div>
-  <div id="manSearchResults"></div>
-  <div class="section-label" style="margin-top:18px;">Detaljer (juster ved behov)</div>
-  <div class="field-row"><label>Navn</label><input type="text" id="manName" placeholder="f.eks. Grillet kylling"></div>
-  <div class="field-row"><label>Mengde (g)</label><input type="number" id="manGrams" value="100"></div>
-  <div class="field-row"><label>Antall</label><input type="number" id="manQty" value="1" min="1" step="1"></div>
-  <div class="field-row"><label>Kcal / 100g</label><input type="number" id="manKcal" value="0"></div>
-  <div class="field-row"><label>Protein / 100g</label><input type="number" id="manProtein" value="0"></div>
-  <button class="save-btn" onclick="saveManualFood()">Lagre</button>
-  <button class="save-btn danger" id="manDeleteBtn" style="display:none;" onclick="deleteEditingFood()">Slett denne varen</button>
-</div>
-
-<!-- Sheet: måltiddetaljer -->
-<div class="sheet-overlay" id="overlaymeal" onclick="closeSheet('sheetmeal')"></div>
-<div class="sheet" id="sheetmeal" style="display:none;">
-  <span class="close-x" onclick="closeSheet('sheetmeal')">Lukk</span>
-  <div class="sheet-handle"></div>
-  <h2 id="mealSheetTitle">Middag</h2>
-  <div class="sub" id="mealSheetSub">08:00</div>
-  <div id="mealFoodList"></div>
-  <div class="btnrow">
-    <button class="save-btn" style="flex:1" onclick="openAddMethod()">+ Legg til mat</button>
-    <button class="save-btn secondary" style="flex:1" onclick="copyPreviousMeal()">Kopier forrige</button>
-  </div>
-</div>
-
-<!-- Sheet: vann -->
-<div class="sheet-overlay" id="overlaywater" onclick="closeSheet('sheetwater')"></div>
-<div class="sheet" id="sheetwater" style="display:none;">
-  <span class="close-x" onclick="closeSheet('sheetwater')">Lukk</span>
-  <div class="sheet-handle"></div>
-  <h2>Vann i dag</h2>
-  <div class="sub"><span id="waterSumInSheet">0</span> ml av <span id="waterGoalInSheet">1500</span> ml</div>
-
-  <div class="quickrow">
-    <div class="option-btn" style="flex:1; justify-content:center;" onclick="addWater(150)">+150 ml<br>(glass)</div>
-    <div class="option-btn" style="flex:1; justify-content:center;" onclick="addWater(330)">+330 ml<br>(flaske)</div>
-    <div class="option-btn" style="flex:1; justify-content:center;" onclick="addWater(500)">+500 ml<br>(mugge)</div>
-  </div>
-
-  <div class="section-label">Egen mengde</div>
-  <div class="field-row">
-    <label>Mengde (ml)</label>
-    <input type="number" id="customWaterQty" value="200">
-  </div>
-  <button class="save-btn" onclick="addWater(parseFloat(document.getElementById('customWaterQty').value) || 0)">Legg til</button>
-  <button class="save-btn secondary" onclick="undoWater()">Angre siste</button>
-</div>
-
-<!-- Sheet: vitaminer -->
-<div class="sheet-overlay" id="overlayvitamin" onclick="closeSheet('sheetvitamin')"></div>
-<div class="sheet" id="sheetvitamin" style="display:none;">
-  <span class="close-x" onclick="closeSheet('sheetvitamin')">Lukk</span>
-  <div class="sheet-handle"></div>
-  <h2>Vitaminer &amp; tilskudd</h2>
-  <div class="sub">Trykk for å krysse av det du har tatt i dag.</div>
-
-  <div id="vitaminChecklist"></div>
-
-  <div class="section-label">Legg til nytt tilskudd</div>
-  <div class="field-row">
-    <label>Navn</label>
-    <input type="text" id="newVitaminName" placeholder="f.eks. Kalsium">
-  </div>
-  <button class="save-btn" onclick="addVitamin()">Legg til i listen</button>
-</div>
-
-<!-- Sheet: registrer vekt -->
-<div class="sheet-overlay" id="overlayweight" onclick="closeSheet('sheetweight')"></div>
-<div class="sheet" id="sheetweight" style="display:none;">
-  <span class="close-x" onclick="closeSheet('sheetweight')">Lukk</span>
-  <div class="sheet-handle"></div>
-  <h2>Registrer vekt</h2>
-  <div class="sub" id="weightSheetSub">For valgt dag</div>
-  <div class="field-row"><label>Dato</label><input type="date" id="weightDateInput"></div>
-  <div class="field-row"><label>Tidspunkt</label><input type="time" id="weightTimeInput"></div>
-  <div class="field-row"><label>Vekt (kg)</label><input type="number" step="0.1" id="weightInput" placeholder="0,0"></div>
-  <button class="save-btn" onclick="saveWeight()">Lagre</button>
-  <button class="save-btn danger" id="weightDeleteBtn" style="display:none;" onclick="deleteWeightEntry()">Slett denne registreringen</button>
-</div>
-
-<!-- Sheet: avtale/påminnelse -->
-<div class="sheet-overlay" id="overlayappt" onclick="closeSheet('sheetappt')"></div>
-<div class="sheet" id="sheetappt" style="display:none;">
-  <span class="close-x" onclick="closeSheet('sheetappt')">Lukk</span>
-  <div class="sheet-handle"></div>
-  <h2 id="apptSheetTitle">Ny avtale</h2>
-  <div class="field-row"><label>Navn</label><input type="text" id="apptTitleInput" placeholder="f.eks. Kontrolltime kirurgisk avd."></div>
-  <div class="field-row"><label>Dato</label><input type="date" id="apptDateInput"></div>
-  <div class="field-row"><label>Tidspunkt</label><input type="time" id="apptTimeInput"></div>
-  <div class="field-row"><label>Notat</label><input type="text" id="apptNotesInput" placeholder="valgfritt"></div>
-  <button class="save-btn" onclick="saveAppointment()">Lagre</button>
-  <button class="save-btn danger" id="apptDeleteBtn" style="display:none;" onclick="deleteAppointment()">Slett avtale</button>
-</div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
-<script>
-  // ============================================================
-  // LAGRING — bruker window.storage (Claude.ai-forhåndsvisning) hvis
-  // tilgjengelig, ellers vanlig localStorage (f.eks. på GitHub Pages).
-  // Dermed fungerer appen uansett hvor du åpner den.
-  // ============================================================
-  const STORAGE_KEY = 'bariapp-state-v1';
-
-  async function storageGet(key) {
-    if (window.storage) {
-      try {
-        const r = await window.storage.get(key);
-        return r ? JSON.parse(r.value) : null;
-      } catch { return null; }
-    }
-    try {
-      const v = localStorage.getItem(key);
-      return v ? JSON.parse(v) : null;
-    } catch { return null; }
-  }
-
-  async function storageSet(key, value) {
-    if (window.storage) {
-      try { await window.storage.set(key, JSON.stringify(value)); }
-      catch (e) { console.error('storage.set feilet', e); }
-      return;
-    }
-    try { localStorage.setItem(key, JSON.stringify(value)); }
-    catch (e) { console.error('localStorage feilet', e); }
-  }
-
-  // ============================================================
-  // DATA
-  // ============================================================
-  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
-
-  function todayStr() {
-    const d = new Date();
-    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-    return d.toISOString().slice(0, 10);
-  }
-  function dateObj(s) { return new Date(s + 'T12:00:00'); }
-  function longDate(s) {
-    return new Intl.DateTimeFormat('nb-NO', { weekday: 'long', day: 'numeric', month: 'long' }).format(dateObj(s)).toUpperCase();
-  }
-  function shortDate(s) {
-    return new Intl.DateTimeFormat('nb-NO', { day: 'numeric', month: 'short' }).format(dateObj(s));
-  }
-
-  const normalMeals = [
-    { id: 'breakfast', name: 'Frokost', time: '08:00' },
-    { id: 'lunch', name: 'Lunsj', time: '12:00' },
-    { id: 'dinner', name: 'Middag', time: '16:30' },
-    { id: 'evening', name: 'Kveldsmat', time: '20:00' },
-  ];
-  const hobbitMeals = [
-    { id: 'breakfast', name: 'Breakfast', time: '07:30' },
-    { id: 'second-breakfast', name: 'Second Breakfast', time: '09:30' },
-    { id: 'elevenses', name: 'Elevenses', time: '11:00' },
-    { id: 'lunch', name: 'Luncheon', time: '13:00' },
-    { id: 'afternoon-tea', name: 'Afternoon Tea', time: '15:30' },
-    { id: 'dinner', name: 'Dinner', time: '18:00' },
-    { id: 'evening', name: 'Supper', time: '21:00' },
-  ];
-
-  const defaultState = {
-    currentDate: todayStr(),
-    meals: normalMeals.map(m => ({ ...m })),
-    entries: [],   // {id, date, mealId, foods:[{id,name,grams,kcal,protein}]}
-    water: [],     // {id, date, ml}
-    vitamins: [
-      { id: 'v1', name: 'Multivitamin' },
-      { id: 'v2', name: 'B12' },
-      { id: 'v3', name: 'D-vitamin' },
-      { id: 'v4', name: 'Kalsium' },
-      { id: 'v5', name: 'Jern' },
-    ],
-    vitaminTaken: [], // {date, vitaminId}
-    weights: [],      // {id, date, kg}
-    appointments: [], // {id, title, date, time, notes}
-    settings: { waterGoal: 1500, proteinGoal: 80, hobbitMode: false, gender: '', age: null, heightCm: null, surgeryDate: '', kassalApiKey: '' },
-  };
-
-  const mockProductDb = {
-    '7020097009523': { name: 'Tine Skyr Naturell', kcal: 63, protein: 11 },
-    '7035620035004': { name: 'Prior Kyllingfilet', kcal: 110, protein: 23 },
-    '7040513000185': { name: 'Q Kesam Mager', kcal: 65, protein: 12 },
-  };
-
-  let state = null;
-  let activeTab = 'today';
-  let activeMealId = null;
-  let scannerInstance = null;
-
-  async function loadState() {
-    const saved = await storageGet(STORAGE_KEY);
-    state = saved ? { ...structuredClone(defaultState), ...saved, settings: { ...defaultState.settings, ...(saved.settings || {}) } }
-                  : structuredClone(defaultState);
-    // Åpne alltid på dagens dato, uansett hvilken dato som var valgt sist gang appen ble lukket.
-    state.currentDate = todayStr();
-  }
-  async function persist() { await storageSet(STORAGE_KEY, state); }
-
-  // ============================================================
-  // BEREGNINGER
-  // ============================================================
-  function entryFor(mealId, date) {
-    return state.entries.find(e => e.mealId === mealId && e.date === date);
-  }
-  function ensureEntry(mealId, date) {
-    let e = entryFor(mealId, date);
-    if (!e) { e = { id: uid(), date, mealId, foods: [] }; state.entries.push(e); }
-    return e;
-  }
-  function mealTotals(entry) {
-    const t = { kcal: 0, protein: 0 };
-    if (!entry) return t;
-    entry.foods.forEach(f => {
-      const m = (f.grams / 100) * (f.qty || 1);
-      t.kcal += (f.kcal || 0) * m;
-      t.protein += (f.protein || 0) * m;
-    });
-    return t;
-  }
-  function dayProteinTotal(date) {
-    return state.entries.filter(e => e.date === date).reduce((sum, e) => sum + mealTotals(e).protein, 0);
-  }
-  function waterTotal(date) {
-    return state.water.filter(w => w.date === date).reduce((s, w) => s + w.ml, 0);
-  }
-  function vitaminsTakenToday(date) {
-    return state.vitaminTaken.filter(v => v.date === date).map(v => v.vitaminId);
-  }
-
-  // ============================================================
-  // RENDER — HEADER + TABS
-  // ============================================================
-  function render() {
-    renderHeader();
-    renderTabs();
-    if (activeTab === 'today') renderToday();
-    if (activeTab === 'weight') renderWeightTab();
-    if (activeTab === 'settings') renderSettingsTab();
-  }
-
-  function renderHeader() {
-    const d = state.currentDate;
-    const isToday = d === todayStr();
-    const protein = Math.round(dayProteinTotal(d));
-    const water = waterTotal(d);
-    const takenIds = vitaminsTakenToday(d);
-    document.getElementById('headerArea').innerHTML = `
-      <div class="brand">BARIATRISKREISE</div>
-      <div class="day">
-        <span>${isToday ? 'I DAG' : longDate(d)}</span>
-        <span class="datenav">
-          <button onclick="shiftDate(-1)">‹</button>
-          ${isToday ? '' : '<button onclick="goToday()">I dag</button>'}
-          <button onclick="shiftDate(1)">›</button>
-        </span>
-      </div>
-      <h1>${isToday ? 'I dag' : longDate(d)}</h1>
-      <div class="summary">
-        <div class="stat"><div class="num">${protein} g</div><div class="lbl">protein</div></div>
-        <div class="stat"><div class="num">${water} ml</div><div class="lbl">av ${state.settings.waterGoal} ml</div></div>
-        <div class="stat"><div class="num">${takenIds.length}/${state.vitamins.length}</div><div class="lbl">vitamin/tilskudd</div></div>
-      </div>`;
-  }
-
-  function renderTabs() {
-    const tabs = [['today', 'I dag'], ['weight', 'Vekt'], ['settings', 'Innstillinger']];
-    document.getElementById('tabbar').innerHTML = tabs.map(([id, label]) =>
-      `<div class="tabbtn ${activeTab === id ? 'active' : ''}" onclick="setTab('${id}')">${label}</div>`
-    ).join('');
-  }
-  function setTab(id) { activeTab = id; render(); }
-  function shiftDate(n) {
-    const d = dateObj(state.currentDate);
-    d.setDate(d.getDate() + n);
-    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-    state.currentDate = d.toISOString().slice(0, 10);
-    render();
-  }
-  function goToday() { state.currentDate = todayStr(); render(); }
-
-  // ============================================================
-  // TAB: I DAG
-  // ============================================================
-  function daysDiff(dateStr) {
-    return Math.round((dateObj(dateStr).getTime() - dateObj(todayStr()).getTime()) / 86400000);
-  }
-  function surgeryBannerHtml() {
-    if (!state.settings.surgeryDate) return '';
-    const diff = daysDiff(state.settings.surgeryDate);
-    if (diff > 0) return `<div class="info-note" style="margin-bottom:16px;">🗓️ <strong>${diff} dager</strong> til operasjonen</div>`;
-    if (diff === 0) return `<div class="info-note" style="margin-bottom:16px;">🎉 I dag er operasjonsdagen</div>`;
-    return `<div class="info-note" style="margin-bottom:16px;">💪 Dag <strong>${Math.abs(diff)}</strong> etter operasjonen</div>`;
-  }
-
-  function renderToday() {
-    const date = state.currentDate;
-    const takenIds = vitaminsTakenToday(date);
-    const ratio = state.vitamins.length ? takenIds.length / state.vitamins.length : 0;
-    let vitaminEmoji = '💊';
-    if (ratio === 0) vitaminEmoji = '😐';
-    else if (ratio < 0.5) vitaminEmoji = '🙂';
-    else if (ratio < 1) vitaminEmoji = '😊';
-    else vitaminEmoji = '🤩';
-
-    const meals = [...state.meals].sort((a, b) => (a.time || '').localeCompare(b.time || ''));
-    const loggedCount = meals.filter(m => entryFor(m.id, date)?.foods.length).length;
-
-    document.getElementById('mainArea').innerHTML = `
-      ${surgeryBannerHtml()}
-      <div class="quickrow">
-        <div class="quickbtn" onclick="openSheet('sheetwater')"><span class="ic">💧</span>Vann</div>
-        <div class="quickbtn ${ratio === 1 ? 'complete' : ''}" onclick="openSheet('sheetvitamin')"><span class="ic">${vitaminEmoji}</span>Vitamin</div>
-        <div class="quickbtn" onclick="alert('Dagbok-notat — egen enkel tekstboks, ikke bygget i denne prototypen ennå.')"><span class="ic">📝</span>Notat</div>
-      </div>
-
-      <div class="section-label"><span>Måltider</span><span class="badge">${loggedCount}/${meals.length}</span></div>
-      <div id="mealList">${meals.map(m => mealCardHtml(m, date)).join('')}</div>
-    `;
-    // oppdater vann-arkets tall dersom det er åpent
-    document.getElementById('waterSumInSheet').textContent = waterTotal(date);
-    document.getElementById('waterGoalInSheet').textContent = state.settings.waterGoal;
-    renderVitaminChecklist();
-  }
-
-  function mealCardHtml(m, date) {
-    const e = entryFor(m.id, date);
-    const logged = e && e.foods.length;
-    const totals = mealTotals(e);
-    const desc = logged ? `${Math.round(totals.protein)} g protein · ${Math.round(totals.kcal)} kcal` : 'Ikke logget ennå';
-    return `
-      <div class="meal-card ${logged ? 'logged' : ''}" onclick="openMealSheet('${m.id}')">
-        <div class="left">
-          <div class="name">${m.name}<span class="time">${m.time}</span></div>
-          <div class="desc">${desc}</div>
-        </div>
-        <div class="status">${logged ? '✓' : '›'}</div>
-      </div>`;
-  }
-
-  // ---------- Vitaminer ----------
-  function renderVitaminChecklist() {
-    const el = document.getElementById('vitaminChecklist');
-    if (!el) return;
-    const date = state.currentDate;
-    const takenIds = vitaminsTakenToday(date);
-    el.innerHTML = state.vitamins.map(v => {
-      const taken = takenIds.includes(v.id);
-      return `<div class="option-btn" onclick="toggleVitaminItem('${v.id}')">
-        <span class="ic">${taken ? '✅' : '⬜️'}</span> ${v.name}
-      </div>`;
-    }).join('');
-  }
-  function toggleVitaminItem(vitaminId) {
-    const date = state.currentDate;
-    const idx = state.vitaminTaken.findIndex(v => v.date === date && v.vitaminId === vitaminId);
-    if (idx >= 0) state.vitaminTaken.splice(idx, 1);
-    else state.vitaminTaken.push({ date, vitaminId });
-    persist(); render();
-  }
-  function addVitamin() {
-    const inp = document.getElementById('newVitaminName');
-    const name = inp.value.trim();
-    if (!name) return;
-    state.vitamins.push({ id: 'v' + uid(), name });
-    inp.value = '';
-    persist(); render();
-  }
-
-  // ---------- Vann ----------
-  function addWater(amount) {
-    if (!amount) return;
-    state.water.push({ id: uid(), date: state.currentDate, ml: amount });
-    persist(); render();
-    showToast(`+${amount} ml vann`);
-  }
-  function undoWater() {
-    const items = state.water.filter(w => w.date === state.currentDate);
-    if (!items.length) return;
-    const last = items[items.length - 1];
-    state.water = state.water.filter(w => w.id !== last.id);
-    persist(); render();
-  }
-
-  // ---------- Måltid-sheet ----------
-  function openMealSheet(mealId) {
-    activeMealId = mealId;
-    renderMealSheet();
-    openSheet('sheetmeal');
-  }
-  function renderMealSheet() {
-    const m = state.meals.find(x => x.id === activeMealId);
-    if (!m) return;
-    const e = entryFor(m.id, state.currentDate);
-    document.getElementById('mealSheetTitle').textContent = m.name;
-    document.getElementById('mealSheetSub').textContent = m.time;
-    const list = document.getElementById('mealFoodList');
-    if (!e || !e.foods.length) {
-      list.innerHTML = `<div class="info-note">Ingenting logget her ennå. Legg til mat, eller kopier forrige gang du hadde ${m.name.toLowerCase()}.</div>`;
-      return;
-    }
-    list.innerHTML = e.foods.map(f => {
-      const qty = f.qty || 1;
-      const mult = (f.grams / 100) * qty;
-      const qtyLabel = qty > 1 ? `${qty} stk × ${f.grams} g` : `${f.grams} g`;
-      return `
-      <div class="food-row">
-        <div onclick="editFoodItem('${e.id}','${f.id}')" style="cursor:pointer; flex:1;">
-          <div class="pname">${f.name}</div>
-          <div class="pmeta">${qtyLabel} · ${Math.round(f.protein * mult)} g protein · ${Math.round(f.kcal * mult)} kcal</div>
-        </div>
-        <div class="actions">
-          <span onclick="editFoodItem('${e.id}','${f.id}')">✏️</span>
-          <span onclick="deleteFood('${e.id}','${f.id}')">🗑</span>
-        </div>
-      </div>`;
-    }).join('');
-  }
-  function deleteFood(entryId, foodId) {
-    const e = state.entries.find(x => x.id === entryId);
-    if (!e) return;
-    e.foods = e.foods.filter(f => f.id !== foodId);
-    persist(); renderMealSheet(); render();
-  }
-  function copyPreviousMeal() {
-    const m = state.meals.find(x => x.id === activeMealId);
-    const prev = state.entries
-      .filter(e => e.mealId === activeMealId && e.date < state.currentDate && e.foods.length)
-      .sort((a, b) => b.date.localeCompare(a.date))[0];
-    if (!prev) { showToast('Fant ingen tidligere ' + m.name.toLowerCase()); return; }
-    const target = ensureEntry(activeMealId, state.currentDate);
-    target.foods = prev.foods.map(f => ({ ...f, id: uid() }));
-    persist(); renderMealSheet(); render();
-    showToast(`Kopierte forrige ${m.name.toLowerCase()}`);
-  }
-
-  // ---------- Legg til mat: metode-valg ----------
-  function openAddMethod() {
-    const m = state.meals.find(x => x.id === activeMealId);
-    document.getElementById('methodSub').textContent = `Hvordan vil du legge mat til ${m.name.toLowerCase()}?`;
-    closeSheet('sheetmeal');
-    openSheet('sheetmethod');
-  }
-  function openTemplates() {
-    closeSheet('sheetmethod');
-    alert('Mal-biblioteket er ikke bygget i denne prototypen ennå — tenkt som en liste over tidligere lagrede måltider, sortert etter sist brukt.');
-    backToMealSheet();
-  }
-  // Lukker et under-ark (metode-valg / skanner / manuell) og går tilbake
-  // til måltid-arket i stedet for å la begge stå åpne samtidig.
-  function closeSubSheet(id) {
-    closeSheet(id);
-    backToMealSheet();
-  }
-  function backToMealSheet() {
-    if (!activeMealId) return;
-    renderMealSheet();
-    openSheet('sheetmeal');
-  }
-
-  // ---------- Manuell mat (legg til / rediger) ----------
-  let manSearchTimeout = null;
-  let lastSearchResults = [];
-  let editingFoodEntryId = null;
-  let editingFoodItemId = null;
-
-  function onManualSearchInput(value) {
-    clearTimeout(manSearchTimeout);
-    const q = value.trim();
-    const el = document.getElementById('manSearchResults');
-    if (q.length < 3) { el.innerHTML = ''; return; }
-    el.innerHTML = '<div class="info-note">Søker …</div>';
-    manSearchTimeout = setTimeout(async () => {
-      const results = await searchFoodDb(q);
-      renderManualSearchResults(results);
-    }, 450);
-  }
-
-  // Prøver den nyere søkemotoren (Search-a-licious) først — bedre til fritekstsøk,
-  // men fortsatt i beta hos Open Food Facts. Faller tilbake til det eldre,
-  // enklere tekstsøket hvis det ikke gir treff eller kallet feiler.
-  function extractHits(data) {
-    if (Array.isArray(data.hits)) return data.hits;
-    if (Array.isArray(data.products)) return data.products;
-    if (Array.isArray(data.results)) return data.results;
-    return [];
-  }
-  function extractNutrients(item) {
-    const n = item.nutriments || {};
-    const kcal = n['energy-kcal_100g'] ?? item['nutriments.energy-kcal_100g'] ?? 0;
-    const protein = n['proteins_100g'] ?? item['nutriments.proteins_100g'] ?? 0;
-    return { kcal: Math.round(kcal), protein: Math.round(protein * 10) / 10 };
-  }
-
-  async function searchFoodDb(query) {
-    if (state.settings.kassalApiKey) {
-      try {
-        const res = await fetch(`https://kassal.app/api/v1/products?search=${encodeURIComponent(query)}&size=6`, {
-          headers: { Authorization: `Bearer ${state.settings.kassalApiKey}` },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          const mapped = (data.data || []).map(p => ({ name: p.name, ...extractKassalNutrition(p) }));
-          if (mapped.length) return mapped;
-        }
-      } catch (err) {
-        console.warn('Kassal.app-søk feilet, prøver Open Food Facts i stedet.', err);
-      }
-    }
-    try {
-      const url = `https://search.openfoodfacts.org/search?q=${encodeURIComponent(query)}&langs=no,en&page_size=6&fields=product_name,nutriments`;
-      const res = await fetch(url);
-      if (res.ok) {
-        const data = await res.json();
-        const mapped = extractHits(data)
-          .filter(h => h.product_name)
-          .map(h => ({ name: h.product_name, ...extractNutrients(h) }));
-        if (mapped.length) return mapped;
-      }
-    } catch (err) {
-      console.warn('Search-a-licious feilet, prøver eldre søk i stedet.', err);
-    }
-    try {
-      const url2 = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=6&fields=product_name,nutriments`;
-      const res2 = await fetch(url2);
-      const data2 = await res2.json();
-      return (data2.products || [])
-        .filter(p => p.product_name)
-        .map(p => ({ name: p.product_name, ...extractNutrients(p) }));
-    } catch (err) {
-      console.warn('Eldre søk feilet også.', err);
-      return [];
-    }
-  }
-
-  function renderManualSearchResults(results) {
-    lastSearchResults = results;
-    const el = document.getElementById('manSearchResults');
-    if (!results.length) {
-      el.innerHTML = '<div class="info-note">Ingen treff. Fyll inn manuelt under i stedet.</div>';
-      return;
-    }
-    el.innerHTML = results.map((r, i) => `
-      <div class="option-btn" onclick="pickManualSearchResult(${i})">
-        <span class="ic">🔎</span>
-        <span>${r.name}</span>
-        <span style="margin-left:auto; color:var(--ink-soft); font-size:12px; white-space:nowrap;">${r.kcal} kcal · ${r.protein} g</span>
-      </div>`).join('');
-  }
-
-  function pickManualSearchResult(i) {
-    const r = lastSearchResults[i];
-    if (!r) return;
-    document.getElementById('manName').value = r.name;
-    document.getElementById('manKcal').value = r.kcal;
-    document.getElementById('manProtein').value = r.protein;
-    document.getElementById('manSearchResults').innerHTML = '';
-    document.getElementById('manSearchInput').value = '';
-  }
-
-  function openManualFood() {
-    closeSheet('sheetmethod');
-    editingFoodEntryId = null;
-    editingFoodItemId = null;
-    document.getElementById('manSheetTitle').textContent = 'Skriv inn mat';
-    document.getElementById('manSearchInput').value = '';
-    document.getElementById('manSearchResults').innerHTML = '';
-    document.getElementById('manName').value = '';
-    document.getElementById('manGrams').value = 100;
-    document.getElementById('manQty').value = 1;
-    document.getElementById('manKcal').value = 0;
-    document.getElementById('manProtein').value = 0;
-    document.getElementById('manDeleteBtn').style.display = 'none';
-    openSheet('sheetmanual');
-  }
-
-  function editFoodItem(entryId, foodId) {
-    const e = state.entries.find(x => x.id === entryId);
-    const f = e && e.foods.find(x => x.id === foodId);
-    if (!f) return;
-    editingFoodEntryId = entryId;
-    editingFoodItemId = foodId;
-    document.getElementById('manSheetTitle').textContent = 'Rediger vare';
-    document.getElementById('manSearchInput').value = '';
-    document.getElementById('manSearchResults').innerHTML = '';
-    document.getElementById('manName').value = f.name;
-    document.getElementById('manGrams').value = f.grams;
-    document.getElementById('manQty').value = f.qty || 1;
-    document.getElementById('manKcal').value = f.kcal;
-    document.getElementById('manProtein').value = f.protein;
-    document.getElementById('manDeleteBtn').style.display = 'block';
-    closeSheet('sheetmeal');
-    openSheet('sheetmanual');
-  }
-
-  function saveManualFood() {
-    const name = document.getElementById('manName').value.trim();
-    if (!name) return;
-    const grams = parseFloat(document.getElementById('manGrams').value) || 0;
-    const qty = parseFloat(document.getElementById('manQty').value) || 1;
-    const kcal = parseFloat(document.getElementById('manKcal').value) || 0;
-    const protein = parseFloat(document.getElementById('manProtein').value) || 0;
-
-    if (editingFoodEntryId && editingFoodItemId) {
-      const e = state.entries.find(x => x.id === editingFoodEntryId);
-      const f = e && e.foods.find(x => x.id === editingFoodItemId);
-      if (f) { f.name = name; f.grams = grams; f.qty = qty; f.kcal = kcal; f.protein = protein; }
-    } else {
-      const e = ensureEntry(activeMealId, state.currentDate);
-      e.foods.push({ id: uid(), name, grams, qty, kcal, protein });
-    }
-    persist();
-    closeSheet('sheetmanual');
-    render();
-    backToMealSheet();
-    showToast('Lagret');
-  }
-
-  function deleteEditingFood() {
-    if (!editingFoodEntryId || !editingFoodItemId) return;
-    if (!confirm('Slette denne varen?')) return;
-    deleteFood(editingFoodEntryId, editingFoodItemId);
-    closeSheet('sheetmanual');
-    backToMealSheet();
-  }
-
-  // ---------- Strekkode-skanning ----------
-  function openScanner() {
-    closeSheet('sheetmethod');
-    document.getElementById('scanResult').innerHTML = '';
-    openSheet('sheetscan');
-    scannerInstance = new Html5Qrcode('reader');
-    scannerInstance.start(
-      { facingMode: 'environment' },
-      { fps: 10, qrbox: 220 },
-      onScanSuccess,
-      () => {}
-    ).catch(err => {
-      document.getElementById('scanResult').innerHTML =
-        `<div class="api-note">Fikk ikke tilgang til kamera i denne visningen (${err}). På en ekte enhet/nettleser med kameratilgang vil dette fungere direkte.</div>`;
-    });
-  }
-  function onScanSuccess(decodedText) {
-    if (scannerInstance) { scannerInstance.stop().catch(() => {}); scannerInstance = null; }
-    lookupProduct(decodedText).then(showProductHit);
-  }
-  // Trekker ut kcal og protein fra Kassal.app sitt nutrition-felt (antar verdier per 100 g,
-  // som er standard på norske varedeklarasjoner). Norske varer oppgir ofte energi i BÅDE
-  // kJ og kcal som to separate oppføringer — vi prioriterer en oppføring som eksplisitt er
-  // merket med enhet "kcal", og konverterer fra kJ kun som reserve, for å unngå å blande dem.
-  function extractKassalNutrition(product) {
-    let list = product.nutrition;
-    if (!list) return { kcal: 0, protein: 0 };
-    if (!Array.isArray(list)) list = [list];
-    console.log('Kassal.app nutrition (rådata) for', product.name, list);
-
-    let kcalFromKcalUnit = null;
-    let kcalFromKjUnit = null;
-    let protein = 0;
-
-    list.forEach(n => {
-      const label = ((n.code || '') + ' ' + (n.display_name || '')).toLowerCase();
-      const unit = (n.unit || '').toLowerCase();
-      if (label.includes('protein')) { protein = n.amount; return; }
-      if (label.includes('energi') || label.includes('energy') || label.includes('kcal') || label.includes('kj')) {
-        if (unit.includes('kcal')) kcalFromKcalUnit = n.amount;
-        else if (unit.includes('kj')) kcalFromKjUnit = n.amount / 4.184;
-      }
-    });
-
-    const kcal = kcalFromKcalUnit != null ? kcalFromKcalUnit : (kcalFromKjUnit != null ? kcalFromKjUnit : 0);
-    return { kcal: Math.round(kcal), protein: Math.round(protein * 10) / 10 };
-  }
-
-  // Slår opp i Open Food Facts (åpen, gratis, ingen nøkkel trengs for lesing).
-  // Faller tilbake til den lille lokale listen hvis varen ikke finnes der,
-  // eller hvis kallet feiler (f.eks. ingen nett, eller blokkert i en sandkasse-visning).
-  async function lookupProduct(ean) {
-    if (state.settings.kassalApiKey) {
-      try {
-        const res = await fetch(`https://kassal.app/api/v1/products/ean/${ean}`, {
-          headers: { Authorization: `Bearer ${state.settings.kassalApiKey}` },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          const list = data.data || [];
-          if (list.length) {
-            const p = list[0];
-            return { name: p.name, ...extractKassalNutrition(p) };
-          }
-        }
-      } catch (err) {
-        console.warn('Kassal.app-oppslag feilet, prøver Open Food Facts.', err);
-      }
-    }
-    try {
-      const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${ean}.json?fields=product_name,nutriments`);
-      const data = await res.json();
-      if (data.status === 1 && data.product) {
-        const n = data.product.nutriments || {};
-        const kcal = n['energy-kcal_100g'] ?? 0;
-        const protein = n['proteins_100g'] ?? 0;
-        return {
-          name: data.product.product_name || 'Ukjent produkt (Open Food Facts)',
-          kcal: Math.round(kcal),
-          protein: Math.round(protein * 10) / 10,
-        };
-      }
-    } catch (err) {
-      console.warn('Oppslag mot Open Food Facts feilet, bruker lokal reserveliste.', err);
-    }
-    await new Promise(r => setTimeout(r, 150));
-    return mockProductDb[ean] || null;
-  }
-  function showProductHit(product) {
-    const el = document.getElementById('scanResult');
-    if (!product) {
-      el.innerHTML = `<div class="api-note">Fant ingen treff i demo-databasen for denne strekkoden. Prøv EAN 7020097009523 (Skyr) eller 7035620035004 (Kyllingfilet).</div>`;
-      return;
-    }
-    el.innerHTML = `
-      <div class="product-hit">
-        <div class="pname">${product.name}</div>
-        <div class="pmeta">${product.kcal} kcal · ${product.protein} g protein / 100 g</div>
-        <div class="field-row"><label>Mengde (g)</label><input type="number" id="qtyInput" value="100"></div>
-        <div class="field-row"><label>Antall</label><input type="number" id="countInput" value="1" min="1" step="1"></div>
-        <button class="save-btn" onclick="saveScannedFood('${product.name}', ${product.kcal}, ${product.protein})">Lagre</button>
-      </div>`;
-  }
-  function saveScannedFood(name, kcal, protein) {
-    const grams = parseFloat(document.getElementById('qtyInput').value) || 100;
-    const qty = parseFloat(document.getElementById('countInput').value) || 1;
-    const e = ensureEntry(activeMealId, state.currentDate);
-    e.foods.push({ id: uid(), name, grams, qty, kcal, protein });
-    persist();
-    closeSheet('sheetscan');
-    render();
-    backToMealSheet();
-    showToast('Lagret');
-  }
-
-  // ============================================================
-  // TAB: VEKT
-  // ============================================================
-  let editingWeightEntryId = null;
-
-  function currentTimeStr() {
-    const d = new Date();
-    return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
-  }
-
-  function computeBmi(weightKg) {
-    const h = state.settings.heightCm;
-    if (!h || !weightKg) return null;
-    const m = h / 100;
-    return weightKg / (m * m);
-  }
-
-  function renderWeightTab() {
-    const ws = [...state.weights].sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')));
-    const last = ws[ws.length - 1];
-    const bmi = last ? computeBmi(last.kg) : null;
-    document.getElementById('mainArea').innerHTML = `
-      <div class="weight-hero">
-        <div class="lbl">Siste registrering</div>
-        <div class="num">${last ? last.kg.toFixed(1) + ' kg' : '–'}</div>
-      </div>
-      ${bmi ? `<div class="summary" style="margin-bottom:16px;"><div class="stat"><div class="num">${bmi.toFixed(1)}</div><div class="lbl">BMI</div></div></div>`
-            : (state.settings.heightCm ? '' : '<div class="info-note" style="margin-bottom:16px;">Legg inn høyden din under Innstillinger for å se BMI her.</div>')}
-      <div class="settings-block">${renderWeightChart(ws)}</div>
-      <button class="save-btn" onclick="openWeightSheet()">+ Registrer vekt for valgt dag</button>
-      <div class="section-label">Historikk</div>
-      <div class="settings-block">
-        ${ws.length ? [...ws].reverse().map(w => `
-            <div class="history-row" style="cursor:pointer" onclick="openWeightSheet('${w.id}')">
-              <span>${shortDate(w.date)}${w.time ? ' · ' + w.time : ''}</span>
-              <strong>${w.kg.toFixed(1)} kg ›</strong>
-            </div>`).join('')
-                    : '<div class="info-note">Ingen målinger ennå.</div>'}
-      </div>`;
-  }
-
-  function renderWeightChart(sortedWeights) {
-    if (sortedWeights.length < 2) {
-      return '<div class="info-note">Legg inn minst to registreringer for å se en graf over utviklingen.</div>';
-    }
-    const width = 400, height = 160, pad = 24;
-    const kgs = sortedWeights.map(w => w.kg);
-    const minKg = Math.min(...kgs) - 0.5;
-    const maxKg = Math.max(...kgs) + 0.5;
-    const minT = dateObj(sortedWeights[0].date).getTime();
-    const maxT = dateObj(sortedWeights[sortedWeights.length - 1].date).getTime();
-    const spanT = Math.max(1, maxT - minT);
-    const spanKg = Math.max(0.1, maxKg - minKg);
-
-    const points = sortedWeights.map(w => {
-      const x = pad + ((dateObj(w.date).getTime() - minT) / spanT) * (width - pad * 2);
-      const y = height - pad - ((w.kg - minKg) / spanKg) * (height - pad * 2);
-      return { x, y, w };
-    });
-    const pathD = points.map((p, i) => (i === 0 ? 'M' : 'L') + p.x.toFixed(1) + ',' + p.y.toFixed(1)).join(' ');
-    const circles = points.map(p =>
-      `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="5" fill="#2F4A3E" stroke="#FFFFFF" stroke-width="2" style="cursor:pointer" onclick="openWeightSheet('${p.w.id}')"></circle>`
-    ).join('');
-
-    return `
-      <svg viewBox="0 0 ${width} ${height}" style="width:100%; height:auto; display:block;" preserveAspectRatio="xMidYMid meet">
-        <path d="${pathD}" fill="none" stroke="#2F4A3E" stroke-width="2" opacity="0.55"/>
-        ${circles}
-      </svg>
-      <div style="display:flex; justify-content:space-between; font-family:-apple-system,'Segoe UI',sans-serif; font-size:11px; color:var(--ink-soft); margin-top:6px;">
-        <span>${shortDate(sortedWeights[0].date)}</span>
-        <span>${shortDate(sortedWeights[sortedWeights.length - 1].date)}</span>
-      </div>
-      <div class="info-note" style="margin-top:10px;">Trykk på et punkt for å se eller rette den registreringen.</div>`;
-  }
-
-  function openWeightSheet(entryId) {
-    const entry = entryId ? state.weights.find(w => w.id === entryId)
-                           : state.weights.find(w => w.date === state.currentDate);
-    editingWeightEntryId = entry ? entry.id : null;
-
-    document.getElementById('weightSheetSub').textContent = entry
-      ? 'Rediger registrering'
-      : (state.currentDate === todayStr() ? 'For i dag' : 'For ' + shortDate(state.currentDate));
-    document.getElementById('weightDateInput').value = entry ? entry.date : state.currentDate;
-    document.getElementById('weightTimeInput').value = entry && entry.time ? entry.time : currentTimeStr();
-    document.getElementById('weightInput').value = entry ? entry.kg : '';
-    document.getElementById('weightDeleteBtn').style.display = entry ? 'block' : 'none';
-    openSheet('sheetweight');
-  }
-
-  function saveWeight() {
-    const date = document.getElementById('weightDateInput').value;
-    const time = document.getElementById('weightTimeInput').value;
-    const kg = parseFloat(document.getElementById('weightInput').value.replace(',', '.'));
-    if (!date || !kg) return;
-
-    if (editingWeightEntryId) {
-      const entry = state.weights.find(w => w.id === editingWeightEntryId);
-      if (entry) { entry.date = date; entry.time = time; entry.kg = kg; }
-    } else {
-      state.weights.push({ id: uid(), date, time, kg });
-    }
-    persist();
-    closeSheet('sheetweight');
-    render();
-    showToast('Vekt lagret');
-  }
-
-  function deleteWeightEntry() {
-    if (!editingWeightEntryId) return;
-    if (!confirm('Slette denne registreringen?')) return;
-    state.weights = state.weights.filter(w => w.id !== editingWeightEntryId);
-    persist();
-    closeSheet('sheetweight');
-    render();
-    showToast('Slettet');
-  }
-
-  // ============================================================
-  // AVTALER / PÅMINNELSER + KALENDER-EKSPORT
-  // ============================================================
-  let editingAppointmentId = null;
-
-  function apptRowHtml(a) {
-    return `<div class="history-row" style="cursor:pointer" onclick="openApptSheet('${a.id}')">
-      <span>${a.title} — ${shortDate(a.date)}${a.time ? ' · ' + a.time : ''}</span>
-      <span>›</span>
-    </div>`;
-  }
-
-  function openApptSheet(id) {
-    const a = id ? state.appointments.find(x => x.id === id) : null;
-    editingAppointmentId = a ? a.id : null;
-    document.getElementById('apptSheetTitle').textContent = a ? 'Rediger avtale' : 'Ny avtale';
-    document.getElementById('apptTitleInput').value = a ? a.title : '';
-    document.getElementById('apptDateInput').value = a ? a.date : state.currentDate;
-    document.getElementById('apptTimeInput').value = a && a.time ? a.time : '';
-    document.getElementById('apptNotesInput').value = a && a.notes ? a.notes : '';
-    document.getElementById('apptDeleteBtn').style.display = a ? 'block' : 'none';
-    openSheet('sheetappt');
-  }
-  function saveAppointment() {
-    const title = document.getElementById('apptTitleInput').value.trim();
-    const date = document.getElementById('apptDateInput').value;
-    const time = document.getElementById('apptTimeInput').value;
-    const notes = document.getElementById('apptNotesInput').value.trim();
-    if (!title || !date) return;
-    if (editingAppointmentId) {
-      const a = state.appointments.find(x => x.id === editingAppointmentId);
-      if (a) { a.title = title; a.date = date; a.time = time; a.notes = notes; }
-    } else {
-      state.appointments.push({ id: uid(), title, date, time, notes });
-    }
-    persist();
-    closeSheet('sheetappt');
-    renderSettingsTab();
-    showToast('Avtale lagret');
-  }
-  function deleteAppointment() {
-    if (!editingAppointmentId) return;
-    if (!confirm('Slette denne avtalen?')) return;
-    state.appointments = state.appointments.filter(a => a.id !== editingAppointmentId);
-    persist();
-    closeSheet('sheetappt');
-    renderSettingsTab();
-  }
-
-  function icsEscape(str) {
-    return String(str || '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
-  }
-  function pad2(n) { return String(n).padStart(2, '0'); }
-  function icsNow() {
-    const d = new Date();
-    return d.getUTCFullYear() + pad2(d.getUTCMonth() + 1) + pad2(d.getUTCDate()) + 'T' +
-           pad2(d.getUTCHours()) + pad2(d.getUTCMinutes()) + pad2(d.getUTCSeconds()) + 'Z';
-  }
-  function generateIcs() {
-    const events = state.appointments.map(a => ({ title: a.title, date: a.date, time: a.time, notes: a.notes }));
-    if (state.settings.surgeryDate) {
-      events.unshift({ title: 'Operasjonsdato', date: state.settings.surgeryDate, time: '', notes: '' });
-    }
-    const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Maltidslogg//NO'];
-    events.forEach(e => {
-      const dt = e.date.replace(/-/g, '');
-      lines.push('BEGIN:VEVENT');
-      lines.push('UID:' + uid() + '@maltidslogg');
-      lines.push('DTSTAMP:' + icsNow());
-      if (e.time) {
-        const [hh, mm] = e.time.split(':');
-        lines.push(`DTSTART:${dt}T${pad2(hh)}${pad2(mm)}00`);
-      } else {
-        lines.push(`DTSTART;VALUE=DATE:${dt}`);
-      }
-      lines.push('SUMMARY:' + icsEscape(e.title));
-      if (e.notes) lines.push('DESCRIPTION:' + icsEscape(e.notes));
-      lines.push('END:VEVENT');
-    });
-    lines.push('END:VCALENDAR');
-    return lines.join('\r\n');
-  }
-  function exportCalendar() {
-    if (!state.appointments.length && !state.settings.surgeryDate) {
-      alert('Ingen avtaler eller operasjonsdato å eksportere ennå.');
-      return;
-    }
-    const blob = new Blob([generateIcs()], { type: 'text/calendar' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'avtaler.ics'; a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  // ============================================================
-  // TAB: INNSTILLINGER
-  // ============================================================
-  function renderSettingsTab() {
-    document.getElementById('mainArea').innerHTML = `
-      <div class="settings-block">
-        <h3>Matvaredatabase</h3>
-        <div class="sub" style="margin-bottom:12px;">
-          Legg inn din egen Kassal.app API-nøkkel for bedre norsk søk og strekkode-treff.
-          Lagres kun her i appen, aldri i selve kildekoden.
-        </div>
-        <div class="field-row"><label>Kassal.app-nøkkel</label><input type="password" value="${state.settings.kassalApiKey || ''}" onchange="changeSetting('kassalApiKey', this.value)" placeholder="lim inn nøkkel her"></div>
-        <div class="info-note">${state.settings.kassalApiKey ? 'Kassal.app brukes nå som førstevalg. Open Food Facts brukes som reserve.' : 'Uten nøkkel brukes Open Food Facts (internasjonal database).'}</div>
-      </div>
-
-      <div class="settings-block">
-        <h3>Om deg</h3>
-        <div class="field-row"><label>Kjønn</label>
-          <select onchange="changeSetting('gender', this.value)" style="flex:1;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:14px;font-family:inherit;">
-            <option value="" ${!state.settings.gender ? 'selected' : ''}>Ikke oppgitt</option>
-            <option value="kvinne" ${state.settings.gender === 'kvinne' ? 'selected' : ''}>Kvinne</option>
-            <option value="mann" ${state.settings.gender === 'mann' ? 'selected' : ''}>Mann</option>
-            <option value="annet" ${state.settings.gender === 'annet' ? 'selected' : ''}>Annet</option>
-          </select>
-        </div>
-        <div class="field-row"><label>Alder</label><input type="number" value="${state.settings.age || ''}" onchange="changeSetting('age', this.value, true)"></div>
-        <div class="field-row"><label>Høyde (cm)</label><input type="number" value="${state.settings.heightCm || ''}" onchange="changeSetting('heightCm', this.value, true)"></div>
-        <div class="field-row"><label>Operasjonsdato</label><input type="date" value="${state.settings.surgeryDate || ''}" onchange="changeSetting('surgeryDate', this.value)"></div>
-      </div>
-
-      <div class="settings-block">
-        <h3>Avtaler &amp; påminnelser</h3>
-        <div id="apptList">${state.appointments.length ? state.appointments.slice().sort((a,b)=>a.date.localeCompare(b.date)).map(apptRowHtml).join('') : '<div class="info-note">Ingen avtaler lagt inn ennå.</div>'}</div>
-        <button class="save-btn secondary" onclick="openApptSheet()">+ Ny avtale</button>
-        <button class="save-btn" onclick="exportCalendar()">📅 Eksporter til kalender (.ics)</button>
-        <div class="info-note">
-          Laster ned en .ics-fil du kan importere i Kalender-appen din (iPhone, Android, Outlook m.fl.).
-          ${state.settings.surgeryDate ? 'Operasjonsdatoen blir automatisk med i eksporten.' : ''}
-        </div>
-      </div>
-
-      <div class="settings-block">
-        <h3>Måltidsrytme</h3>
-        <div id="slotEditor">${state.meals.map(slotEditorHtml).join('')}</div>
-        <button class="save-btn secondary" onclick="addMealSlot()">+ Nytt måltid</button>
-        <div class="toggle-row" style="margin-top:16px;">
-          <div>
-            <div>Hobbit-modus</div>
-            <div class="desc">Bytter måltidsnavnene til Breakfast · Second Breakfast · Elevenses · Luncheon · Afternoon Tea · Dinner · Supper — bare for gøy.</div>
-          </div>
-          <button class="switch ${state.settings.hobbitMode ? 'on' : ''}" onclick="toggleHobbitMode()"><i></i></button>
-        </div>
-      </div>
-
-      <div class="settings-block">
-        <h3>Dagsmål</h3>
-        <div class="range-label"><span>Vann</span><span>${state.settings.waterGoal} ml</span></div>
-        <input type="range" min="500" max="4000" step="100" value="${state.settings.waterGoal}" oninput="changeGoal('waterGoal', this.value)">
-        <div class="range-label"><span>Protein</span><span>${state.settings.proteinGoal} g</span></div>
-        <input type="range" min="20" max="200" step="5" value="${state.settings.proteinGoal}" oninput="changeGoal('proteinGoal', this.value)">
-      </div>
-
-      <div class="settings-block">
-        <h3>Data</h3>
-        <button class="save-btn secondary" onclick="exportBackup()">Eksporter backup (json)</button>
-        <button class="save-btn secondary" onclick="document.getElementById('importFile').click()">Importer backup</button>
-        <input type="file" id="importFile" accept=".json" style="display:none" onchange="importBackup(this.files[0])">
-        <button class="save-btn danger" onclick="resetAllData()">Nullstill alle data</button>
-      </div>
-
-      <div class="info-note">
-        Data lagres i denne visningen (eller i nettleseren din hvis du åpner filen andre steder, f.eks. GitHub Pages).
-        Ingen konto, sky, AI eller kobling mot helsevesenet.
-      </div>
-    `;
-  }
-
-  function slotEditorHtml(m) {
-    return `
-      <div class="slot-row">
-        <input type="text" value="${m.name}" onchange="updateSlot('${m.id}','name',this.value)">
-        <input type="time" value="${m.time}" onchange="updateSlot('${m.id}','time',this.value)">
-        <span class="del" onclick="deleteSlot('${m.id}')">🗑</span>
-      </div>`;
-  }
-  function updateSlot(id, key, value) {
-    const m = state.meals.find(x => x.id === id);
-    if (!m) return;
-    m[key] = value;
-    persist(); renderSettingsTab();
-  }
-  function deleteSlot(id) {
-    if (!confirm('Slette dette måltidet?')) return;
-    state.meals = state.meals.filter(m => m.id !== id);
-    persist(); renderSettingsTab();
-  }
-  function addMealSlot() {
-    const name = prompt('Navn på det nye måltidet:');
-    if (!name) return;
-    state.meals.push({ id: uid(), name, time: '10:00' });
-    persist(); renderSettingsTab();
-  }
-  function toggleHobbitMode() {
-    state.settings.hobbitMode = !state.settings.hobbitMode;
-    const source = state.settings.hobbitMode ? hobbitMeals : normalMeals;
-    // Behold egendefinerte måltider brukeren selv har lagt til.
-    const knownIds = new Set([...normalMeals, ...hobbitMeals].map(m => m.id));
-    const customMeals = state.meals.filter(m => !knownIds.has(m.id));
-    state.meals = [...source.map(m => ({ ...m })), ...customMeals];
-    persist(); renderSettingsTab();
-  }
-  function changeGoal(key, value) {
-    changeSetting(key, value, true);
-  }
-  function changeSetting(key, value, isNumber) {
-    state.settings[key] = isNumber ? Number(value) : value;
-    persist();
-    renderSettingsTab();
-    renderHeader();
-  }
-
-  function exportBackup() {
-    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = `maltidslogg-backup-${todayStr()}.json`; a.click();
-    URL.revokeObjectURL(url);
-  }
-  function importBackup(file) {
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const data = JSON.parse(reader.result);
-        if (!data.meals || !data.settings) throw new Error();
-        state = data;
-        persist(); render();
-        alert('Backup importert.');
-      } catch { alert('Kunne ikke lese backupfilen.'); }
-    };
-    reader.readAsText(file);
-  }
-  function resetAllData() {
-    if (!confirm('Dette sletter alle data. Er du sikker?')) return;
-    state = structuredClone(defaultState);
-    persist(); render();
-  }
-
-  // ============================================================
-  // SHEETS / TOAST
-  // ============================================================
-  function openSheet(id) {
-    document.getElementById(id).style.display = 'block';
-    document.getElementById('overlay' + id.replace('sheet', '')).classList.add('open');
-  }
-  function closeSheet(id) {
-    document.getElementById(id).style.display = 'none';
-    document.getElementById('overlay' + id.replace('sheet', '')).classList.remove('open');
-    if (id === 'sheetscan' && scannerInstance) {
-      scannerInstance.stop().catch(() => {});
-      scannerInstance = null;
-    }
-  }
-  function showToast(msg) {
-    const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), 1800);
-  }
-
-  // ============================================================
-  // START
-  // ============================================================
-  (async function init() {
-    await loadState();
-    render();
-  })();
-</script>
 </body>
 </html>
